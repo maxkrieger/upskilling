@@ -216,23 +216,22 @@ export const useStore = create<State>()(
         const wfSet = get().index(pid).find((s) => s.id === banner.workflowSetId);
         if (!wfSet) return;
 
-        // Mark the banner as in-progress.
-        updateMessageBanner(set, pid, conversationId, messageId, { status: "accepted" });
-
         const memberConvos = get()
           .conversations(pid)
           .filter((c) => wfSet.members.some((m) => m.conversationId === c.id));
 
         try {
+          // Create the skill first; only then flip the banner to "accepted" so
+          // the UI never claims success before the skill actually exists.
           const skill = await createSkill({ workflowSet: wfSet, conversations: memberConvos });
           set((s) => ({ skills: [...s.skills, skill] }));
-          // Mark the set accepted + link skill.
           updateIndexSet(get, set, pid, wfSet.id, (ws) => {
             ws.cueStatus = "accepted";
             ws.skillId = skill.id;
           });
+          updateMessageBanner(set, pid, conversationId, messageId, { status: "accepted" });
         } catch (e) {
-          updateMessageBanner(set, pid, conversationId, messageId, { status: "pending" });
+          // Leave the banner pending so the user can retry.
         }
       },
 

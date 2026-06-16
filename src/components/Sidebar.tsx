@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { PROFILES } from "../data/index.ts";
 import { useStore } from "../store.ts";
 
@@ -9,9 +10,13 @@ export function Sidebar() {
   const setView = useStore((s) => s.setView);
   const newConversation = useStore((s) => s.newConversation);
   const openConversation = useStore((s) => s.openConversation);
-  // re-render when conversations change
-  useStore((s) => s.userConversations);
-  const conversations = useStore((s) => s.conversations());
+  // Derive the (sorted) conversation list from stable state slices, so we don't
+  // pass a freshly-allocated array through a zustand selector (infinite loop).
+  const userConversations = useStore((s) => s.userConversations);
+  const conversations = useMemo(
+    () => useStore.getState().conversations(activeProfileId),
+    [activeProfileId, userConversations],
+  );
   const skills = useStore((s) => s.skills);
   const enabledCount = skills.filter((s) => s.enabled).length;
 

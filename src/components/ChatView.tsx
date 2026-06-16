@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { getProfile } from "../data/index.ts";
 import { useStore } from "../store.ts";
 import { Composer } from "./Composer.tsx";
@@ -8,9 +8,13 @@ export function ChatView() {
   const activeProfileId = useStore((s) => s.activeProfileId);
   const activeConversationId = useStore((s) => s.activeConversationId);
   const sending = useStore((s) => s.sending);
-  // Subscribe to conversation stores so streaming re-renders.
-  useStore((s) => s.userConversations);
-  const convo = useStore((s) => s.activeConversation());
+  // Subscribe to the conversation store (stable ref) and derive the active
+  // conversation with useMemo, rather than via a fresh-array selector.
+  const userConversations = useStore((s) => s.userConversations);
+  const convo = useMemo(
+    () => useStore.getState().activeConversation(),
+    [activeConversationId, activeProfileId, userConversations],
+  );
   const profile = getProfile(activeProfileId)!;
 
   const scrollRef = useRef<HTMLDivElement>(null);
