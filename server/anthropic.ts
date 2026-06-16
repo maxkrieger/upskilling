@@ -1,7 +1,11 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { ENV } from "./env.ts";
 
-export const anthropic = new Anthropic({ apiKey: ENV.ANTHROPIC_API_KEY });
+export const anthropic = new Anthropic({
+  apiKey: ENV.ANTHROPIC_API_KEY,
+  // The demo org has a low concurrent-connection limit; retry 429s patiently.
+  maxRetries: 6,
+});
 
 export interface JsonCallOptions {
   system: string;
