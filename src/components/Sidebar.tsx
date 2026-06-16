@@ -48,7 +48,7 @@ export function Sidebar() {
     () => useStore.getState().conversations(activeProfileId),
     [activeProfileId, userConversations],
   );
-  const skills = useStore((s) => s.skills);
+  const skills = useStore((s) => s.skillsByProfile[s.activeProfileId] ?? s.skillsOf());
   const enabledCount = skills.filter((s) => s.enabled).length;
 
   return (

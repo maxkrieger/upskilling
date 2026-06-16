@@ -36,14 +36,15 @@ interface State {
   userConversations: Record<string, Conversation[]>;
   /** Workflow index overrides, keyed by profile id (seed when absent). */
   indexOverrides: Record<string, WorkflowSet[]>;
-  /** Skills for this browser (builtin + user-created). */
-  skills: Skill[];
+  /** Skills per profile (builtin + user-created); each profile has its own set. */
+  skillsByProfile: Record<string, Skill[]>;
   /** Epoch ms until which skill cues are snoozed (null = not snoozed). */
   cuesSnoozedUntil: number | null;
 
   // selectors
   conversations: (profileId?: string) => Conversation[];
   index: (profileId?: string) => WorkflowSet[];
+  skillsOf: (profileId?: string) => Skill[];
   activeConversation: () => Conversation | undefined;
 
   // actions
@@ -82,7 +83,7 @@ export const useStore = create<State>()(
       viewerAttachment: null,
       userConversations: {},
       indexOverrides: {},
-      skills: BUILTIN_SKILLS,
+      skillsByProfile: Object.fromEntries(PROFILES.map((p) => [p.id, BUILTIN_SKILLS])),
       cuesSnoozedUntil: null,
 
       conversations: (profileId) =>
@@ -94,6 +95,11 @@ export const useStore = create<State>()(
       index: (profileId) => {
         const pid = profileId ?? get().activeProfileId;
         return get().indexOverrides[pid] ?? getProfile(pid)?.workflowIndex ?? [];
+      },
+
+      skillsOf: (profileId) => {
+        const pid = profileId ?? get().activeProfileId;
+        return get().skillsByProfile[pid] ?? BUILTIN_SKILLS;
       },
 
       activeConversation: () => {
@@ -177,7 +183,7 @@ export const useStore = create<State>()(
           userConversations: { ...state.userConversations, [pid]: userConvos },
         });
 
-        const enabledSkills = get().skills.filter((s) => s.enabled);
+        const enabledSkills = get().skillsOf(pid).filter((s) => s.enabled);
         const history = convo.messages
           .filter((m) => m.id !== assistantMsg.id)
           .map((m) => ({ role: m.role, content: m.content, attachments: m.attachments }));
@@ -290,7 +296,12 @@ export const useStore = create<State>()(
           {
             onDelta: (delta) => writeAssistant((m) => (m.content += delta)),
             onSkill: (skill) => {
-              set((s) => ({ skills: [...s.skills, skill] }));
+              set((s) => ({
+                skillsByProfile: {
+                  ...s.skillsByProfile,
+                  [pid]: [...(s.skillsByProfile[pid] ?? BUILTIN_SKILLS), skill],
+                },
+              }));
               writeAssistant((m) => (m.appliedSkillIds = [skill.id]));
               updateIndexSet(get, set, pid, wfSet.id, (ws) => {
                 ws.cueStatus = "accepted";
@@ -327,47 +338,64 @@ export const useStore = create<State>()(
         set({ cuesSnoozedUntil: Date.now() + 60 * 60 * 1000 }); // 1 hour
       },
 
-      toggleSkill: (id) =>
+      toggleSkill: (id) => {
+        const pid = get().activeProfileId;
         set((s) => ({
-          skills: s.skills.map((sk) =>
-            sk.id === id ? { ...sk, enabled: !sk.enabled } : sk,
-          ),
-        })),
+          skillsByProfile: {
+            ...s.skillsByProfile,
+            [pid]: (s.skillsByProfile[pid] ?? BUILTIN_SKILLS).map((sk) =>
+              sk.id === id ? { ...sk, enabled: !sk.enabled } : sk,
+            ),
+          },
+        }));
+      },
 
       deleteSkill: (id) => {
-        const sk = get().skills.find((x) => x.id === id);
+        const pid = get().activeProfileId;
+        const sk = get().skillsOf(pid).find((x) => x.id === id);
         if (sk?.source === "builtin") return;
         // Best-effort: also delete it from the official Skills API.
         if (sk?.skillId) void deleteSkillRemote(sk.skillId);
-        set((s) => ({ skills: s.skills.filter((x) => x.id !== id) }));
+        set((s) => ({
+          skillsByProfile: {
+            ...s.skillsByProfile,
+            [pid]: (s.skillsByProfile[pid] ?? BUILTIN_SKILLS).filter((x) => x.id !== id),
+          },
+        }));
       },
 
       addManualSkill: async (name, description, instructions) => {
+        const pid = get().activeProfileId;
         const skillLocalId = uid("skill");
-        set((s) => ({
-          skills: [
-            ...s.skills,
-            {
-              id: skillLocalId,
-              name,
-              description,
-              instructions,
-              source: "user",
-              enabled: true,
-              createdAt: now(),
+        const patch = (mut: (list: Skill[]) => Skill[]) =>
+          set((s) => ({
+            skillsByProfile: {
+              ...s.skillsByProfile,
+              [pid]: mut(s.skillsByProfile[pid] ?? BUILTIN_SKILLS),
             },
-          ],
-        }));
-        // Register with the official Skills API so the agent can load it.
+          }));
+        patch((list) => [
+          ...list,
+          {
+            id: skillLocalId,
+            name,
+            description,
+            instructions,
+            source: "user",
+            enabled: true,
+            createdAt: now(),
+          },
+        ]);
+        // Register with the official Skills API so the model can load it.
         const registered = await registerSkillRemote({ name, description, instructions });
         if (registered) {
-          set((s) => ({
-            skills: s.skills.map((sk) =>
+          patch((list) =>
+            list.map((sk) =>
               sk.id === skillLocalId
                 ? { ...sk, skillId: registered.skillId, skillVersion: registered.skillVersion }
                 : sk,
             ),
-          }));
+          );
         }
       },
 
@@ -392,18 +420,21 @@ export const useStore = create<State>()(
         activeProfileId: s.activeProfileId,
         userConversations: s.userConversations,
         indexOverrides: s.indexOverrides,
-        skills: s.skills,
+        skillsByProfile: s.skillsByProfile,
         cuesSnoozedUntil: s.cuesSnoozedUntil,
       }),
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<State>;
-        // Always ensure builtin skills are present.
-        const skills = p.skills ?? current.skills;
-        const withBuiltins = [
-          ...BUILTIN_SKILLS.filter((b) => !skills.some((s) => s.id === b.id)),
-          ...skills,
-        ];
-        return { ...current, ...p, skills: withBuiltins };
+        // Ensure every profile has its own skill set with the builtins present.
+        const byProfile = { ...current.skillsByProfile, ...(p.skillsByProfile ?? {}) };
+        for (const prof of PROFILES) {
+          const list = byProfile[prof.id] ?? [];
+          byProfile[prof.id] = [
+            ...BUILTIN_SKILLS.filter((b) => !list.some((s) => s.id === b.id)),
+            ...list,
+          ];
+        }
+        return { ...current, ...p, skillsByProfile: byProfile };
       },
     },
   ),

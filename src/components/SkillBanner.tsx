@@ -18,7 +18,7 @@ export function SkillBanner({
   const dismissCue = useStore((s) => s.dismissCue);
   const snoozeCue = useStore((s) => s.snoozeCue);
   const setView = useStore((s) => s.setView);
-  const skills = useStore((s) => s.skills);
+  const skills = useStore((s) => s.skillsByProfile[s.activeProfileId] ?? s.skillsOf());
   const [busy, setBusy] = useState(false);
 
   // The real name is only known after the skill is created (post-consent).

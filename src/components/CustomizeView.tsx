@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useStore } from "../store.ts";
 
 export function CustomizeView() {
-  const skills = useStore((s) => s.skills);
+  const skills = useStore((s) => s.skillsByProfile[s.activeProfileId] ?? s.skillsOf());
   const toggleSkill = useStore((s) => s.toggleSkill);
   const deleteSkill = useStore((s) => s.deleteSkill);
   const addManualSkill = useStore((s) => s.addManualSkill);

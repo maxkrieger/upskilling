@@ -34,7 +34,7 @@ export function MessageView({
   conversationId: string;
   streaming?: boolean;
 }) {
-  const skills = useStore((s) => s.skills);
+  const skills = useStore((s) => s.skillsByProfile[s.activeProfileId] ?? s.skillsOf());
   const isUser = message.role === "user";
   const applied = (message.appliedSkillIds ?? [])
     .map((id) => skills.find((s) => s.id === id))

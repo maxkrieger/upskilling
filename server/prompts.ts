@@ -1,4 +1,16 @@
+import { readFileSync } from "node:fs";
 import type { WorkflowSet, Conversation } from "../shared/types.ts";
+
+/** The bundled skill-creator skill's own instructions (the source of truth). */
+let SKILL_CREATOR_GUIDE = "";
+try {
+  SKILL_CREATOR_GUIDE = readFileSync(
+    new URL("../lib/skills/skill-creator/SKILL.md", import.meta.url),
+    "utf8",
+  );
+} catch (e) {
+  console.warn("[prompts] could not load skill-creator SKILL.md:", (e as Error).message);
+}
 
 export const CHART_INSTRUCTIONS = `When the user asks for a chart, graph, or visualization, emit a fenced code block with the language tag \`chart\` containing JSON of this shape:
 \`\`\`chart
@@ -154,12 +166,12 @@ export const SKILL_SCHEMA = {
     description: {
       type: "string",
       description:
-        "One-to-two sentence description starting with what it does, including trigger phrasing so it activates on the right requests. This is what the model sees to decide relevance.",
+        "One-to-two sentences: what the skill does, then when it applies. Trigger on the TASK/intent only (e.g. \"when the user asks for a bar chart for a deck or slides\", \"a bar chart of a metric by category\"). NEVER trigger on the user restating their preferences — the entire point is that the skill infers those preferences so the user no longer has to state them. Do not quote preference phrases (\"same as always\", \"no gridlines\", \"company colors\") as triggers; those belong in instructions, not the trigger.",
     },
     instructions: {
       type: "string",
       description:
-        "The SKILL.md body in markdown: concrete, imperative steps and preferences distilled from the user's repeated workflow. Capture every specific constraint observed (colors, formats, do's and don'ts).",
+        "The SKILL.md body in markdown: concrete, imperative steps and the preferences to apply automatically, distilled from the user's repeated workflow. Capture every specific constraint observed (colors, formats, do's and don'ts) as defaults the skill applies WITHOUT being asked.",
     },
   },
   required: ["name", "description", "instructions"],
@@ -167,7 +179,15 @@ export const SKILL_SCHEMA = {
 } as const;
 
 export function buildSkillCreatorSystem(): string {
-  return `You are the skill-creator. You turn a user's repeated workflow into a reusable Skill (a SKILL.md). Capture the concrete, specific preferences the user expressed verbatim across their conversations so that a single short request in future reproduces their exact desired output. Be precise and imperative. Do not invent preferences the evidence does not support.`;
+  return `${SKILL_CREATOR_GUIDE}
+
+---
+
+## This task (one-shot mode)
+
+You are applying the skill-creator above, in the "just vibe with me" one-shot path: the user has an established, repeated workflow (provided as evidence below) and wants it captured as a single Skill right now — do NOT run the eval/test-case loop, spawn subagents, or reference scripts/workspaces. Produce exactly one SKILL.md, returned via the structured fields requested (name, description, instructions).
+
+Apply the Skill Writing Guide above. One critical reminder, since the evidence quotes the user restating their preferences: those preferences (colors, formatting, do's and don'ts) are the skill's BEHAVIOR — defaults it applies automatically — they are NOT triggers. The description must trigger on the underlying task/context ("a bar chart for a deck", "an NDA review") so the skill fires even when the user no longer mentions any preference. Never phrase the trigger as the user repeating preferences ("same as always", "no gridlines"); the entire point is that they no longer have to say those.`;
 }
 
 /**

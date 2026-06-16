@@ -17,7 +17,7 @@ export function Composer({ showPresets }: { showPresets: boolean }) {
   const sending = useStore((s) => s.sending);
   const sendMessage = useStore((s) => s.sendMessage);
   const openAttachment = useStore((s) => s.openAttachment);
-  const skills = useStore((s) => s.skills);
+  const skills = useStore((s) => s.skillsByProfile[s.activeProfileId] ?? s.skillsOf());
   const indexOverrides = useStore((s) => s.indexOverrides);
   const profile = getProfile(activeProfileId)!;
 
