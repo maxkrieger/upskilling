@@ -1,7 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type {
-  AgentHandle,
   Attachment,
   ChatMeta,
   Conversation,
@@ -37,8 +36,6 @@ interface State {
   indexOverrides: Record<string, WorkflowSet[]>;
   /** Skills for this browser (builtin + user-created). */
   skills: Skill[];
-  /** Managed Agents agent handle per profile (created lazily, cached here). */
-  agents: Record<string, AgentHandle>;
   /** Epoch ms until which skill cues are snoozed (null = not snoozed). */
   cuesSnoozedUntil: number | null;
 
@@ -81,7 +78,6 @@ export const useStore = create<State>()(
       userConversations: {},
       indexOverrides: {},
       skills: BUILTIN_SKILLS,
-      agents: {},
       cuesSnoozedUntil: null,
 
       conversations: (profileId) =>
@@ -177,6 +173,9 @@ export const useStore = create<State>()(
         });
 
         const enabledSkills = get().skills.filter((s) => s.enabled);
+        const history = convo.messages
+          .filter((m) => m.id !== assistantMsg.id)
+          .map((m) => ({ role: m.role, content: m.content, attachments: m.attachments }));
         // Held back and attached only after the reply finishes streaming, so the
         // cue banner reads as an inline follow-up to a complete response.
         let pendingBanner: ChatMeta["banner"] | undefined;
@@ -186,23 +185,15 @@ export const useStore = create<State>()(
             profileId: pid,
             profileName: profile.name,
             profileRole: profile.role,
-            userText: text,
-            attachments,
+            messages: history,
             skills: enabledSkills,
             workflowIndex: get().index(pid),
             suppressCue: (get().cuesSnoozedUntil ?? 0) > Date.now(),
-            agent: get().agents[pid],
-            sessionId: convo.sessionId,
-            sessionAgentId: convo.sessionAgentId,
           },
           {
             onMeta: (meta: ChatMeta) => {
               pendingBanner = meta.banner; // shown after the reply streams in
-              // Persist the agent handle (per profile) and session (per convo).
-              set((s) => ({ agents: { ...s.agents, [pid]: meta.agent } }));
               writeConvos((c) => {
-                c.sessionId = meta.sessionId;
-                c.sessionAgentId = meta.agent.id;
                 const am = c.messages.find((m) => m.id === assistantMsg.id);
                 if (am) am.appliedSkillIds = meta.appliedSkillIds;
               });
@@ -343,11 +334,7 @@ export const useStore = create<State>()(
         if (sk?.source === "builtin") return;
         // Best-effort: also delete it from the official Skills API.
         if (sk?.skillId) void deleteSkillRemote(sk.skillId);
-        // Invalidate cached agents so the next turn rebuilds without this skill.
-        set((s) => ({
-          skills: s.skills.filter((x) => x.id !== id),
-          agents: {},
-        }));
+        set((s) => ({ skills: s.skills.filter((x) => x.id !== id) }));
       },
 
       addManualSkill: async (name, description, instructions) => {
@@ -365,7 +352,6 @@ export const useStore = create<State>()(
               createdAt: now(),
             },
           ],
-          agents: {}, // force agent rebuild to include the new skill
         }));
         // Register with the official Skills API so the agent can load it.
         const registered = await registerSkillRemote({ name, description, instructions });
@@ -399,7 +385,6 @@ export const useStore = create<State>()(
         userConversations: s.userConversations,
         indexOverrides: s.indexOverrides,
         skills: s.skills,
-        agents: s.agents,
         cuesSnoozedUntil: s.cuesSnoozedUntil,
       }),
       merge: (persisted, current) => {

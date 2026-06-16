@@ -7,7 +7,7 @@ const FRAMES = ["·", "✢", "✳", "∗", "✻", "✽", "✻", "∗", "✳", "�
 export function ThinkingGlyph({ className = "" }: { className?: string }) {
   const [i, setI] = useState(0);
   useEffect(() => {
-    const t = setInterval(() => setI((x) => (x + 1) % FRAMES.length), 90);
+    const t = setInterval(() => setI((x) => (x + 1) % FRAMES.length), 200);
     return () => clearInterval(t);
   }, []);
   return (

@@ -50,23 +50,41 @@ export type StreamHandlers = {
 /**
  * Stream a chat completion, calling `onText` for each text delta. Returns the
  * full accumulated text.
+ *
+ * When `container` is passed (skills), the request goes through the beta
+ * Messages API with the code-execution + skills betas, so Claude loads the
+ * referenced Skills natively. Otherwise it's a plain streamed completion.
  */
 export async function streamChat(params: {
   system: string;
   messages: Anthropic.MessageParam[];
   model?: string;
   maxTokens?: number;
+  /** `{ skills: [{ type, skill_id, version }] }` to attach Skills. */
+  container?: unknown;
+  tools?: unknown;
+  betas?: string[];
   handlers: StreamHandlers;
 }): Promise<string> {
   let full = "";
-  const stream = anthropic.messages.stream({
+  const base: Record<string, unknown> = {
     model: params.model ?? ENV.MODEL_MAIN,
     max_tokens: params.maxTokens ?? 2048,
     system: params.system,
     messages: params.messages,
-  });
+  };
 
-  stream.on("text", (delta) => {
+  const useBeta = !!params.container || (params.betas?.length ?? 0) > 0;
+  const stream = useBeta
+    ? (anthropic.beta.messages.stream as any)({
+        ...base,
+        ...(params.container ? { container: params.container } : {}),
+        ...(params.tools ? { tools: params.tools } : {}),
+        betas: params.betas,
+      })
+    : anthropic.messages.stream(base as any);
+
+  stream.on("text", (delta: string) => {
     full += delta;
     params.handlers.onText(delta);
   });

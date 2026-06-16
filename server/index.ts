@@ -7,13 +7,14 @@ import { jsonCall, streamChat } from "./anthropic.ts";
 import { decideCue } from "./cue.ts";
 import { reportError } from "./discord.ts";
 import {
+  CODE_EXECUTION_TOOL,
   deleteSkillRemote,
-  ensureAgent,
-  ensureSession,
   registerSkill,
-  streamTurn,
-} from "./managedAgents.ts";
+  skillContainer,
+  SKILLS_BETAS,
+} from "./skills.ts";
 import {
+  buildChatSystem,
   buildExtractUser,
   buildSkillCreatorSystem,
   buildSkillCreatorUser,
@@ -22,7 +23,7 @@ import {
   EXTRACT_SCHEMA,
   SKILL_SCHEMA,
 } from "./prompts.ts";
-import { conversationToText, id } from "./util.ts";
+import { conversationToText, id, toAnthropicMessages } from "./util.ts";
 import type {
   ChatMeta,
   ChatRequest,
@@ -72,17 +73,17 @@ app.post("/api/auth", async (c) => {
   return c.json({ ok });
 });
 
-// ---- Chat: cueing decider + Managed Agents session turn (streamed). ----
+// ---- Chat: cueing decider + streamed completion with Skills attached. ----
 app.post("/api/chat", async (c) => {
   const body = await c.req.json<ChatRequest>();
+  const lastUser = [...(body.messages ?? [])].reverse().find((m) => m.role === "user");
 
-  // Run the cueing decider (stateless Messages-API call) before the agent turn.
-  // Skipped entirely when the user has snoozed cues.
+  // Run the cueing decider (stateless) before the response. Skipped when snoozed.
   let cueInstruction: string | undefined;
   let banner: ChatMeta["banner"];
-  if (!body.suppressCue) try {
+  if (!body.suppressCue && lastUser) try {
     const decision = await decideCue({
-      userMessage: body.userText ?? "",
+      userMessage: lastUser.content,
       workflowIndex: body.workflowIndex ?? [],
       skills: body.skills ?? [],
     });
@@ -101,42 +102,49 @@ app.post("/api/chat", async (c) => {
     void reportError(err, { source: "POST /api/chat (cue decider)" });
   }
 
+  const meta: ChatMeta = {
+    banner,
+    appliedSkillIds: (body.skills ?? []).filter((s) => s.enabled).map((s) => s.id),
+  };
+
+  // Build the message history; deliver any cue as an operator note appended to
+  // the latest user turn (the client never displays what we send here).
+  const messages = toAnthropicMessages(body.messages ?? []);
+  if (cueInstruction) {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === "user") {
+        messages[i] = { ...messages[i], content: `${messages[i].content}\n\n${cueInstruction}` };
+        break;
+      }
+    }
+  }
+
+  // Attach the user's enabled, registered skills via container.skills. With no
+  // skills it's a plain streamed completion (no container/tool provisioning).
+  const container = skillContainer(body.skills ?? []);
+  const system = buildChatSystem({
+    profileName: body.profileName ?? body.profileId,
+    profileRole: body.profileRole ?? "",
+  });
+
   return streamSSE(c, async (stream) => {
+    await stream.writeSSE({ event: "meta", data: JSON.stringify(meta) });
     try {
-      // Ensure the agent (reuses the client's cached one if its skill set is
-      // unchanged) and the session, so meta can carry both back to the client.
-      const agent = await ensureAgent({
-        profileName: body.profileName ?? body.profileId,
-        profileRole: body.profileRole ?? "",
-        skills: body.skills ?? [],
-        clientAgent: body.agent,
-      });
-      const sessionId = await ensureSession({
-        agentId: agent.id,
-        sessionId: body.sessionId,
-        sessionAgentId: body.sessionAgentId,
-      });
-
-      const meta: ChatMeta = {
-        banner,
-        appliedSkillIds: (body.skills ?? []).filter((s) => s.enabled).map((s) => s.id),
-        agent,
-        sessionId,
-      };
-      await stream.writeSSE({ event: "meta", data: JSON.stringify(meta) });
-
-      await streamTurn({
-        sessionId,
-        userText: body.userText ?? "",
-        attachments: body.attachments,
-        cueInstruction,
-        onText: (delta) => {
-          void stream.writeSSE({ event: "delta", data: JSON.stringify({ text: delta }) });
+      await streamChat({
+        system,
+        messages,
+        container: container ?? undefined,
+        tools: container ? [CODE_EXECUTION_TOOL] : undefined,
+        betas: container ? SKILLS_BETAS : undefined,
+        handlers: {
+          onText: (delta) => {
+            void stream.writeSSE({ event: "delta", data: JSON.stringify({ text: delta }) });
+          },
         },
       });
     } catch (err) {
-      console.error("[chat] turn error:", err);
-      void reportError(err, { source: "POST /api/chat (agent turn)", details: { profile: body.profileId } });
+      console.error("[chat] stream error:", err);
+      void reportError(err, { source: "POST /api/chat (stream)", details: { profile: body.profileId } });
       await stream.writeSSE({
         event: "error",
         data: JSON.stringify({ message: (err as Error).message }),

@@ -67,17 +67,6 @@ export interface Conversation {
   updatedAt: string;
   /** True for conversations created by the live user (vs. seeded demo data). */
   userCreated?: boolean;
-  /** Managed Agents session backing this conversation (server-side history). */
-  sessionId?: string;
-  /** The agent id the session was created with (to detect skill-set drift). */
-  sessionAgentId?: string;
-}
-
-/** Per-(browser,profile) Managed Agents agent handle, cached in localStorage. */
-export interface AgentHandle {
-  id: string;
-  /** Fingerprint of the inputs (profile + skill set) the agent was built from. */
-  fingerprint: string;
 }
 
 export interface PresetPrompt {
@@ -156,31 +145,20 @@ export interface ChatRequest {
   profileId: string;
   profileName: string;
   profileRole: string;
-  /** The new user turn (sessions hold prior history server-side). */
-  userText: string;
-  attachments?: Attachment[];
+  /** Full prior message history for the conversation (Messages API is stateless). */
+  messages: Array<Pick<Message, "role" | "content" | "attachments">>;
   /** Currently enabled skills (builtin + user); user skills carry skillId. */
   skills: Skill[];
   /** The user's current workflow index for cueing. */
   workflowIndex: WorkflowSet[];
   /** When true, skip cue detection entirely (the user snoozed cues). */
   suppressCue?: boolean;
-  /** Cached agent handle for this (browser, profile), if any. */
-  agent?: AgentHandle;
-  /** Existing session for this conversation, if any. */
-  sessionId?: string;
-  /** The agent id the existing session was created with, if any. */
-  sessionAgentId?: string;
 }
 
 /** Sent as the first SSE `meta` event before text streaming begins. */
 export interface ChatMeta {
   banner?: SkillCueBanner;
   appliedSkillIds: string[];
-  /** Agent used for this turn — client persists it per profile. */
-  agent: AgentHandle;
-  /** Session backing this conversation — client persists it on the convo. */
-  sessionId: string;
 }
 
 export interface ExtractRequest {

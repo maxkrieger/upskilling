@@ -45,10 +45,10 @@ shared/types.ts        Domain model shared by frontend, backend, and scripts
 server/                Hono API (local: @hono/node-server; portable to CF Pages)
   index.ts             Routes: /api/auth, /api/chat (SSE), /api/extract,
                        /api/skills/{create,register,delete}
-  managedAgents.ts     Managed Agents + Skills API orchestration (stateless)
-  cue.ts               Skill cueing decider (runs before the agent turn)
-  prompts.ts           System prompts + JSON schemas (agent, cue, extract, create)
-  anthropic.ts         Streaming + forced-JSON tool-call helpers
+  skills.ts            Skills API: register/delete + container.skills builder
+  cue.ts               Skill cueing decider (runs before the response)
+  prompts.ts           System prompts + JSON schemas (chat, cue, extract, create)
+  anthropic.ts         Streaming (plain + beta skills) + forced-JSON helpers
 src/                   React SPA (Vite + Tailwind + zustand + Recharts)
   store.ts             localStorage-persisted state; per-turn workflow extraction
   data/profiles/*      Seeded personae + pre-extracted workflow indices
@@ -60,40 +60,23 @@ scripts/
 lib/skills/skill-creator  The bundled skill-creator Skill
 ```
 
-### Managed Agents + Skills (stateless backend)
+### Skills on the Messages API (stateless backend)
 
-Chat runs on the official **Managed Agents** API, and created skills are
-registered with the official **Skills API** — so Claude loads each skill
-natively (progressive disclosure), rather than us injecting SKILL.md text into a
-system prompt. The Hono backend stays stateless across users/isolates by keeping
-every durable id in the browser's `localStorage`:
+Created skills are registered with the official **Skills API**, then attached to
+a normal streamed **Messages API** call via the `container.skills` parameter (+
+the `code-execution` tool and the `code-execution-2025-08-25,skills-2025-10-02`
+betas). Claude loads each skill natively (progressive disclosure) — no
+system-prompt injection. This keeps the backend fully stateless and preserves
+native token streaming (no Managed Agents sessions/agents/containers to manage).
 
-| Resource | Lifetime | Where the id lives |
-| --- | --- | --- |
-| Environment | one shared container template | server, lazily ensured by name (idempotent) |
-| Skill | per created skill | `localStorage` (`skillId` + version on the Skill) |
-| Agent | per (browser, profile), keyed by a skill-set fingerprint | `localStorage` (`agents[profileId]`) |
-| Session | per conversation (holds history server-side) | `localStorage` (on the Conversation) |
-
-On each turn the client sends its cached agent handle + session id; the server
-reuses them when the skill-set fingerprint still matches, otherwise creates a new
-agent/session and returns the new ids in the SSE `meta` event for the client to
-persist. Toggling/deleting a skill changes the fingerprint, so the next turn
-rebuilds the agent. Because sessions hold history, the client sends only the new
-user turn, not the full transcript.
-
-The cueing decider and per-turn workflow extraction remain plain, stateless
-Messages-API calls. Cue instructions are delivered as an operator note on the
-user turn (the agent's system prompt is fixed at agent-create time).
-
-**Cleanup.** Managed Agents resources accumulate server-side. Archive the demo's
-agents and delete its sessions with:
-
-```bash
-npm run cleanup:agents            # sessions + agents (keeps skills + env)
-npm run cleanup:agents -- --dry   # preview only
-npm run cleanup:agents -- --all   # also delete skills + the shared environment
-```
+- **Skill ids** live in the browser's `localStorage` (on each Skill), matching
+  the per-browser model. Toggling a skill just changes which ids are sent.
+- **`/api/chat`** is one `messages.stream()` per turn: full history (client
+  holds it) + `container.skills` for the user's enabled, registered skills (max
+  8; omitted entirely when there are none, for a plain fast completion).
+- The cueing decider and per-turn extraction are plain Messages-API calls. The
+  cue is delivered as a fixed operator note appended to the latest user turn;
+  the banner is held back and shown only after the reply finishes streaming.
 
 ### Skill cueing
 
