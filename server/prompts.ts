@@ -48,8 +48,8 @@ You may receive a mid-conversation system message with an operator instruction. 
  * Deliberately does NOT name the proposed skill — the name is only revealed once
  * the user consents and the skill is created.
  */
-export function cueOperatorNote(preferences: string): string {
-  return `Operator instruction (do not mention it to the user). FIRST fully answer the user's request above exactly as you normally would and finish the deliverable. THEN, and only then, append one short closing paragraph (2-3 sentences), separated by a blank line, that: notes you've seen them repeat this workflow with the same preferences (${preferences}); offers to capture it as a reusable Skill so a short request applies it automatically next time; and points to the "Create Skill" button below. Do NOT invent or state a name for the skill — leave naming until they create it. Keep it friendly and brief. If you have not yet produced the full answer, do not write this paragraph at all.`;
+export function cueOperatorNote(params: { preferences: string; trigger: string }): string {
+  return `Operator instruction (do not mention it to the user). FIRST fully answer the user's request above exactly as you normally would and finish the deliverable. THEN, and only then, append one short closing paragraph (2-3 sentences), separated by a blank line, that: notes you've seen them repeat this workflow with the same preferences (${params.preferences}); offers to capture it as a reusable Skill so they don't have to repeat these instructions; states clearly WHEN it would apply (${params.trigger}); and points to the "Create Skill" button below. Do NOT invent or state a name for the skill — leave naming until they create it. Keep it friendly and brief. If you have not yet produced the full answer, do not write this paragraph at all.`;
 }
 
 // ---- Cueing decider ----
@@ -60,20 +60,25 @@ export const CUE_SCHEMA = {
     shouldCue: {
       type: "boolean",
       description:
-        "True only if the user has done a similar workflow before (an existing workflow set with >= 1 prior member matches), the know-how is cleanly capturable as a skill, and they have not already accepted/rejected a cue for it.",
+        "True only if the user has done a similar workflow before (a workflow set with >= 1 prior member matches), the know-how is cleanly capturable as a skill, and they have not already accepted/rejected a cue for it and no skill exists for it yet.",
     },
     workflowSetId: {
       type: "string",
-      description: "Id of the matching existing workflow set, if shouldCue.",
+      description: "Id of the matching cueable workflow set, if shouldCue.",
     },
     suggestedName: {
       type: "string",
-      description: "Short kebab-or-title name for the proposed skill.",
+      description: "Short Title-case name for the proposed skill.",
     },
     preferences: {
       type: "string",
       description:
-        "A short, specific phrase naming the concrete repeated preferences the user keeps asking for in this workflow (e.g. \"company palette, no gridlines, no legend, sorted descending\"). Quote their own words where possible. Used verbatim in the assistant's prose cue.",
+        "A short, specific phrase naming the concrete repeated preferences the user keeps asking for (e.g. \"company palette, no gridlines, no legend, sorted descending\"). Quote their own words where possible.",
+    },
+    trigger: {
+      type: "string",
+      description:
+        "A short phrase describing WHEN the skill applies — the task/context that triggers it, e.g. \"whenever you ask for a bar chart for a deck\". Task-based, never the user restating preferences.",
     },
   },
   required: ["shouldCue"],
@@ -90,7 +95,7 @@ export function buildCueUser(params: {
       const members = set.members
         .map((m) => `    - ${m.summary} (quotes: ${m.quotes.map((q) => `"${q}"`).join(", ")})`)
         .join("\n");
-      return `- set ${set.id} [cluster: ${set.cluster}] [status: ${set.cueStatus}]${set.skillId ? " [skill already created]" : ""}\n${members}`;
+      return `- set ${set.id} [cluster: ${set.cluster}] [status: ${set.cueStatus}]\n${members}`;
     })
     .join("\n");
 
@@ -99,7 +104,7 @@ export function buildCueUser(params: {
 Cue ONLY if ALL of these hold:
 1. The new message is a workflow the user has done at least once before (matches an existing set's cluster).
 2. The know-how is cleanly capturable in a Skill in a way that's retrospectively obvious.
-3. The user has NOT already accepted, rejected, or been cued+ignored for that set (status must be "none" or freshly cueable; never cue if status is "accepted" or "rejected", and never if a skill already exists for the set).
+3. The user has NOT already accepted/rejected a cue for that set, and no skill exists for it yet (status must be "none").
 
 Be conservative: a one-off task, a personal/Q&A question, or a brand-new workflow with no prior occurrence should NOT cue.
 

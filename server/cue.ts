@@ -6,14 +6,14 @@ import type { CueDecision, Skill, WorkflowSet } from "../shared/types.ts";
  * The Skill cueing decider. Analyzes the latest user message against the user's
  * workflow index BEFORE the response model runs, deciding whether to nudge the
  * user to create a Skill. Returns a decision; when shouldCue, the caller builds
- * a fixed operator note from `preferences` and surfaces a static CTA banner.
+ * a fixed operator note and surfaces a static CTA banner.
  */
 export async function decideCue(params: {
   userMessage: string;
   workflowIndex: WorkflowSet[];
   skills: Skill[];
 }): Promise<CueDecision> {
-  // Cheap pre-filter: nothing to cue against.
+  // Cueable: repeated workflows without a skill, not already accepted/rejected.
   const cueable = params.workflowIndex.filter(
     (s) => s.cueStatus !== "accepted" && s.cueStatus !== "rejected" && !s.skillId,
   );
@@ -30,7 +30,6 @@ export async function decideCue(params: {
     schema: CUE_SCHEMA as unknown as Record<string, unknown>,
   });
 
-  // Guard: the referenced set must actually be cueable.
   if (decision.shouldCue && decision.workflowSetId) {
     const ok = cueable.some((s) => s.id === decision.workflowSetId);
     if (!ok) return { shouldCue: false };

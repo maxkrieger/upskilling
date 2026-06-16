@@ -2,6 +2,7 @@ import { useMemo, type ReactNode } from "react";
 import { Plus, SlidersHorizontal, Trash2 } from "lucide-react";
 import { PROFILES } from "../data/index.ts";
 import { useStore } from "../store.ts";
+import { DebugPanel } from "./DebugPanel.tsx";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select.tsx";
 
 function NavRow({
@@ -108,8 +109,9 @@ export function Sidebar() {
         ))}
       </div>
 
-      {/* Bottom: clear stored data */}
+      {/* Bottom: debug panel + clear stored data */}
       <div className="border-t border-border p-3">
+        <DebugPanel />
         <button
           onClick={() => {
             if (

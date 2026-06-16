@@ -86,9 +86,12 @@ export function SkillBanner({
           </div>
           <p className="mt-1 text-sm text-muted">
             {banner.summary
-              ? `Remembers your usual specifics — ${banner.summary} — so a short request reproduces them next time.`
-              : "Capture these steps once so a short request reproduces them next time."}
+              ? `Remembers your usual specifics — ${banner.summary} — so you don't have to repeat your instructions.`
+              : "Capture this once so you don't have to repeat your instructions."}
           </p>
+          {banner.trigger && (
+            <p className="mt-1 text-xs text-faint">Applies {banner.trigger}.</p>
+          )}
           <div className="mt-3 flex gap-2">
             <button
               disabled={busy}

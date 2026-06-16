@@ -90,11 +90,15 @@ app.post("/api/chat", async (c) => {
     if (decision.shouldCue && decision.workflowSetId) {
       // Fixed, strongly-ordered operator note (built here, not by the decider).
       // It does not name the skill — the name is revealed only after creation.
-      cueInstruction = cueOperatorNote(decision.preferences ?? "the same preferences");
+      cueInstruction = cueOperatorNote({
+        preferences: decision.preferences ?? "the same preferences",
+        trigger: decision.trigger ?? "this kind of task",
+      });
       banner = {
         workflowSetId: decision.workflowSetId,
         suggestedName: decision.suggestedName ?? "New Skill",
         summary: decision.preferences,
+        trigger: decision.trigger,
         status: "pending",
       };
     }

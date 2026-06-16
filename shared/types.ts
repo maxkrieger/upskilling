@@ -45,6 +45,8 @@ export interface SkillCueBanner {
   suggestedName: string;
   /** Short, dynamic summary of the captured knowledge (the repeated preferences). */
   summary?: string;
+  /** When the skill applies (the trigger condition), shown for transparency. */
+  trigger?: string;
   status: "pending" | "accepted" | "dismissed" | "snoozed";
 }
 
@@ -190,7 +192,8 @@ export interface CueDecision {
   shouldCue: boolean;
   workflowSetId?: string;
   suggestedName?: string;
-  /** Concrete repeated preferences to name in the prose cue, e.g.
-   * "company palette, no gridlines, no legend, sorted descending". */
+  /** Concrete repeated preferences to name in the prose cue. */
   preferences?: string;
+  /** When the skill applies (task/context that triggers it). */
+  trigger?: string;
 }
