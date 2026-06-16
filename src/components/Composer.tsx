@@ -16,6 +16,7 @@ export function Composer({ showPresets }: { showPresets: boolean }) {
   const activeProfileId = useStore((s) => s.activeProfileId);
   const sending = useStore((s) => s.sending);
   const sendMessage = useStore((s) => s.sendMessage);
+  const openAttachment = useStore((s) => s.openAttachment);
   const profile = getProfile(activeProfileId)!;
 
   const [text, setText] = useState("");
@@ -79,10 +80,17 @@ export function Composer({ showPresets }: { showPresets: boolean }) {
               key={a.id}
               className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-elevated px-2 py-1 text-xs text-muted"
             >
-              {a.kind === "image" ? <ImageIcon size={13} /> : <FileText size={13} />}
-              {a.name}
+              <button
+                className="inline-flex items-center gap-1.5 hover:text-ink"
+                title={`View ${a.name}`}
+                onClick={() => openAttachment(a)}
+              >
+                {a.kind === "image" ? <ImageIcon size={13} /> : <FileText size={13} />}
+                {a.name}
+              </button>
               <button
                 className="ml-1 text-faint hover:text-ink"
+                title="Remove"
                 onClick={() => setAttachments((list) => list.filter((x) => x.id !== a.id))}
               >
                 <X size={13} />

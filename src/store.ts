@@ -29,6 +29,8 @@ interface State {
   activeConversationId: string | null;
   view: View;
   sending: boolean;
+  /** Attachment open in the side viewer panel (null = closed). */
+  viewerAttachment: Attachment | null;
 
   /** User-created (or promoted) conversations, keyed by profile id. */
   userConversations: Record<string, Conversation[]>;
@@ -58,6 +60,8 @@ interface State {
   deleteSkill: (id: string) => void;
   addManualSkill: (name: string, description: string, instructions: string) => Promise<void>;
   clearAllData: () => void;
+  openAttachment: (a: Attachment) => void;
+  closeAttachment: () => void;
 }
 
 function mergeConversations(profileId: string, userConvos: Conversation[]): Conversation[] {
@@ -75,6 +79,7 @@ export const useStore = create<State>()(
       activeConversationId: null,
       view: "chat",
       sending: false,
+      viewerAttachment: null,
       userConversations: {},
       indexOverrides: {},
       skills: BUILTIN_SKILLS,
@@ -365,6 +370,9 @@ export const useStore = create<State>()(
           }));
         }
       },
+
+      openAttachment: (a) => set({ viewerAttachment: a }),
+      closeAttachment: () => set({ viewerAttachment: null }),
 
       // Wipe all persisted state (skills, conversations, workflow index, auth)
       // and reload to a clean first-run.

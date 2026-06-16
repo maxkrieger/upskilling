@@ -6,17 +6,20 @@ import { SkillBanner } from "./SkillBanner.tsx";
 import { ThinkingGlyph } from "./ThinkingGlyph.tsx";
 
 function AttachmentChips({ message }: { message: Message }) {
+  const openAttachment = useStore((s) => s.openAttachment);
   if (!message.attachments?.length) return null;
   return (
     <div className="mb-2 flex flex-wrap gap-2">
       {message.attachments.map((a) => (
-        <span
+        <button
           key={a.id}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-elevated px-2 py-1 text-xs text-muted"
+          onClick={() => openAttachment(a)}
+          title={`View ${a.name}`}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-elevated px-2 py-1 text-xs text-muted hover:border-accent/50 hover:text-ink"
         >
           {a.kind === "image" ? <ImageIcon size={13} /> : <FileText size={13} />}
           {a.name}
-        </span>
+        </button>
       ))}
     </div>
   );
