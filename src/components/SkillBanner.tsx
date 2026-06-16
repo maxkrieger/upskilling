@@ -17,7 +17,13 @@ export function SkillBanner({
   const dismissCue = useStore((s) => s.dismissCue);
   const snoozeCue = useStore((s) => s.snoozeCue);
   const setView = useStore((s) => s.setView);
+  const skills = useStore((s) => s.skills);
   const [busy, setBusy] = useState(false);
+
+  // The real name is only known after the skill is created (post-consent).
+  const createdName =
+    skills.find((s) => s.fromWorkflowSetId === banner.workflowSetId)?.name ??
+    banner.suggestedName;
 
   if (banner.status === "snoozed") {
     return (
@@ -40,7 +46,7 @@ export function SkillBanner({
       <div className="mt-3 flex items-center justify-between rounded-xl border border-accent/40 bg-accent/10 px-4 py-3">
         <div className="flex items-center gap-2 text-sm text-ink">
           <CheckCircle2 size={16} className="text-accent" />
-          Created the <span className="font-semibold">{banner.suggestedName}</span> skill. It’s now active.
+          Created the <span className="font-semibold">{createdName}</span> skill. It’s now active.
         </div>
         <button
           onClick={() => setView("customize")}

@@ -88,12 +88,12 @@ app.post("/api/chat", async (c) => {
       skills: body.skills ?? [],
     });
     if (decision.shouldCue && decision.workflowSetId) {
-      const suggestedName = decision.suggestedName ?? "New Skill";
       // Fixed, strongly-ordered operator note (built here, not by the decider).
-      cueInstruction = cueOperatorNote(suggestedName, decision.preferences ?? "the same preferences");
+      // It does not name the skill — the name is revealed only after creation.
+      cueInstruction = cueOperatorNote(decision.preferences ?? "the same preferences");
       banner = {
         workflowSetId: decision.workflowSetId,
-        suggestedName,
+        suggestedName: decision.suggestedName ?? "New Skill",
         status: "pending",
       };
     }
@@ -104,7 +104,11 @@ app.post("/api/chat", async (c) => {
 
   const meta: ChatMeta = {
     banner,
-    appliedSkillIds: (body.skills ?? []).filter((s) => s.enabled).map((s) => s.id),
+    // Only skills actually attached to the request (registered + enabled) — not
+    // the builtin skill-creator, which is never sent to the model.
+    appliedSkillIds: (body.skills ?? [])
+      .filter((s) => s.enabled && s.skillId)
+      .map((s) => s.id),
   };
 
   // Build the message history; deliver any cue as an operator note appended to

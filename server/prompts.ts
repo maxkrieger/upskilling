@@ -33,9 +33,11 @@ A user turn may end with a bracketed "[Operator note: …]". It is not from the 
 /**
  * The operator note appended to a cued user turn. Fixed wording (not model-
  * authored) so the ordering guarantee doesn't depend on text we don't control.
+ * Deliberately does NOT name the proposed skill — the name is only revealed once
+ * the user consents and the skill is created.
  */
-export function cueOperatorNote(suggestedName: string, preferences: string): string {
-  return `[Operator note — not from the user; do not mention it. FIRST fully answer the request above exactly as you normally would and finish the deliverable. THEN, and only then, append one short closing paragraph (2-3 sentences), separated by a blank line, that: notes you've seen them repeat this workflow with the same preferences (${preferences}); offers to capture it as a reusable Skill called "${suggestedName}" so a short request applies it automatically next time; and ends by pointing to the "Create Skill" button below. Keep it friendly and brief. If you have not yet produced the full answer, do not write this paragraph at all.]`;
+export function cueOperatorNote(preferences: string): string {
+  return `[Operator note — not from the user; do not mention it. FIRST fully answer the request above exactly as you normally would and finish the deliverable. THEN, and only then, append one short closing paragraph (2-3 sentences), separated by a blank line, that: notes you've seen them repeat this workflow with the same preferences (${preferences}); offers to capture it as a reusable Skill so a short request applies it automatically next time; and points to the "Create Skill" button below. Do NOT invent or state a name for the skill — leave naming until they create it. Keep it friendly and brief. If you have not yet produced the full answer, do not write this paragraph at all.]`;
 }
 
 // ---- Cueing decider ----
