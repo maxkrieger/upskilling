@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { CheckCircle2, Sparkles, X } from "lucide-react";
 import type { SkillCueBanner } from "../../shared/types.ts";
 import { useStore } from "../store.ts";
 
@@ -14,8 +15,17 @@ export function SkillBanner({
 }) {
   const acceptCue = useStore((s) => s.acceptCue);
   const dismissCue = useStore((s) => s.dismissCue);
+  const snoozeCue = useStore((s) => s.snoozeCue);
   const setView = useStore((s) => s.setView);
   const [busy, setBusy] = useState(false);
+
+  if (banner.status === "snoozed") {
+    return (
+      <div className="mt-3 rounded-xl border border-border bg-surface/60 px-4 py-2 text-xs text-faint">
+        Skill suggestions snoozed for an hour.
+      </div>
+    );
+  }
 
   if (banner.status === "dismissed") {
     return (
@@ -28,9 +38,9 @@ export function SkillBanner({
   if (banner.status === "accepted") {
     return (
       <div className="mt-3 flex items-center justify-between rounded-xl border border-accent/40 bg-accent/10 px-4 py-3">
-        <div className="text-sm text-ink">
-          ✅ Created the <span className="font-semibold">{banner.suggestedName}</span> skill.
-          It’s now active.
+        <div className="flex items-center gap-2 text-sm text-ink">
+          <CheckCircle2 size={16} className="text-accent" />
+          Created the <span className="font-semibold">{banner.suggestedName}</span> skill. It’s now active.
         </div>
         <button
           onClick={() => setView("customize")}
@@ -43,10 +53,18 @@ export function SkillBanner({
   }
 
   return (
-    <div className="mt-3 rounded-xl border border-accent/40 bg-accent/10 p-4">
+    <div className="relative mt-3 rounded-xl border border-accent/40 bg-accent/10 p-4">
+      <button
+        onClick={() => snoozeCue(conversationId, messageId)}
+        title="Snooze skill suggestions"
+        aria-label="Snooze skill suggestions"
+        className="absolute right-2 top-2 rounded-md p-1 text-faint hover:bg-elevated hover:text-ink"
+      >
+        <X size={15} />
+      </button>
       <div className="flex items-start gap-3">
-        <div className="mt-0.5 text-lg">✨</div>
-        <div className="flex-1">
+        <Sparkles size={18} className="mt-0.5 shrink-0 text-accent" />
+        <div className="flex-1 pr-5">
           <div className="text-sm font-semibold text-ink">
             Turn this into a Skill: {banner.suggestedName}
           </div>

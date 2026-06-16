@@ -1,34 +1,8 @@
 import { useMemo, type ReactNode } from "react";
+import { Plus, SlidersHorizontal, Trash2 } from "lucide-react";
 import { PROFILES } from "../data/index.ts";
 import { useStore } from "../store.ts";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select.tsx";
-
-// Thin-line nav icons matching Claude's sidebar.
-const icons = {
-  newChat: (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-      <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-    </svg>
-  ),
-  projects: (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-      <rect x="3" y="6" width="18" height="13" rx="2" stroke="currentColor" strokeWidth="1.6" />
-      <path d="M3 9h18" stroke="currentColor" strokeWidth="1.6" />
-    </svg>
-  ),
-  artifacts: (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-      <path d="M12 3l7 4v10l-7 4-7-4V7l7-4z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
-      <circle cx="12" cy="12" r="2.2" stroke="currentColor" strokeWidth="1.5" />
-    </svg>
-  ),
-  customize: (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-      <rect x="3" y="7" width="18" height="13" rx="2" stroke="currentColor" strokeWidth="1.6" />
-      <path d="M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2" stroke="currentColor" strokeWidth="1.6" />
-    </svg>
-  ),
-};
 
 function NavRow({
   icon,
@@ -100,11 +74,9 @@ export function Sidebar() {
 
       {/* Top nav — Customize lives here, following Claude's sidebar design */}
       <nav className="space-y-0.5 p-2">
-        <NavRow icon={icons.newChat} label="New chat" onClick={() => newConversation()} />
-        <NavRow icon={icons.projects} label="Projects" disabled />
-        <NavRow icon={icons.artifacts} label="Artifacts" disabled />
+        <NavRow icon={<Plus size={18} />} label="New chat" onClick={() => newConversation()} />
         <NavRow
-          icon={icons.customize}
+          icon={<SlidersHorizontal size={18} />}
           label="Customize"
           onClick={() => setView("customize")}
           active={view === "customize"}
@@ -150,14 +122,7 @@ export function Sidebar() {
           }}
           className="flex w-full items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-xs text-faint hover:border-accent/50 hover:text-accent"
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2m2 0v14a1 1 0 01-1 1H7a1 1 0 01-1-1V6"
-              stroke="currentColor"
-              strokeWidth="1.6"
-              strokeLinecap="round"
-            />
-          </svg>
+          <Trash2 size={14} />
           Clear all stored data
         </button>
       </div>

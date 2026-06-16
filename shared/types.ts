@@ -45,7 +45,7 @@ export interface SkillCueBanner {
   suggestedName: string;
   /** Short, self-justifying rationale shown to the user. */
   rationale: string;
-  status: "pending" | "accepted" | "dismissed";
+  status: "pending" | "accepted" | "dismissed" | "snoozed";
 }
 
 export interface Message {
@@ -165,6 +165,8 @@ export interface ChatRequest {
   skills: Skill[];
   /** The user's current workflow index for cueing. */
   workflowIndex: WorkflowSet[];
+  /** When true, skip cue detection entirely (the user snoozed cues). */
+  suppressCue?: boolean;
   /** Cached agent handle for this (browser, profile), if any. */
   agent?: AgentHandle;
   /** Existing session for this conversation, if any. */

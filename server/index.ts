@@ -76,9 +76,10 @@ app.post("/api/chat", async (c) => {
   const body = await c.req.json<ChatRequest>();
 
   // Run the cueing decider (stateless Messages-API call) before the agent turn.
+  // Skipped entirely when the user has snoozed cues.
   let cueInstruction: string | undefined;
   let banner: ChatMeta["banner"];
-  try {
+  if (!body.suppressCue) try {
     const decision = await decideCue({
       userMessage: body.userText ?? "",
       workflowIndex: body.workflowIndex ?? [],

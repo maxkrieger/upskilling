@@ -39,6 +39,8 @@ interface State {
   skills: Skill[];
   /** Managed Agents agent handle per profile (created lazily, cached here). */
   agents: Record<string, AgentHandle>;
+  /** Epoch ms until which skill cues are snoozed (null = not snoozed). */
+  cuesSnoozedUntil: number | null;
 
   // selectors
   conversations: (profileId?: string) => Conversation[];
@@ -54,6 +56,7 @@ interface State {
   sendMessage: (text: string, attachments?: Attachment[]) => Promise<void>;
   acceptCue: (conversationId: string, messageId: string) => Promise<void>;
   dismissCue: (conversationId: string, messageId: string) => void;
+  snoozeCue: (conversationId: string, messageId: string) => void;
   toggleSkill: (id: string) => void;
   deleteSkill: (id: string) => void;
   addManualSkill: (name: string, description: string, instructions: string) => Promise<void>;
@@ -79,6 +82,7 @@ export const useStore = create<State>()(
       indexOverrides: {},
       skills: BUILTIN_SKILLS,
       agents: {},
+      cuesSnoozedUntil: null,
 
       conversations: (profileId) =>
         mergeConversations(
@@ -183,6 +187,7 @@ export const useStore = create<State>()(
             attachments,
             skills: enabledSkills,
             workflowIndex: get().index(pid),
+            suppressCue: (get().cuesSnoozedUntil ?? 0) > Date.now(),
             agent: get().agents[pid],
             sessionId: convo.sessionId,
             sessionAgentId: convo.sessionAgentId,
@@ -309,6 +314,14 @@ export const useStore = create<State>()(
         }
       },
 
+      // Snooze: hide this cue and suppress all cues for a while, WITHOUT
+      // permanently rejecting the workflow set (it can cue again later).
+      snoozeCue: (conversationId, messageId) => {
+        const pid = get().activeProfileId;
+        updateMessageBanner(set, pid, conversationId, messageId, { status: "snoozed" });
+        set({ cuesSnoozedUntil: Date.now() + 60 * 60 * 1000 }); // 1 hour
+      },
+
       toggleSkill: (id) =>
         set((s) => ({
           skills: s.skills.map((sk) =>
@@ -378,6 +391,7 @@ export const useStore = create<State>()(
         indexOverrides: s.indexOverrides,
         skills: s.skills,
         agents: s.agents,
+        cuesSnoozedUntil: s.cuesSnoozedUntil,
       }),
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<State>;

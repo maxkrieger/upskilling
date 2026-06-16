@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Asterisk } from "lucide-react";
 import { checkPassword } from "../api.ts";
 import { useStore } from "../store.ts";
 
@@ -20,7 +21,9 @@ export function Gate() {
   return (
     <div className="flex h-full items-center justify-center px-4">
       <div className="w-full max-w-sm rounded-2xl border border-border bg-surface p-6">
-        <div className="mb-1 text-center text-3xl">✳</div>
+        <div className="mb-1 flex justify-center text-accent">
+          <Asterisk size={32} />
+        </div>
         <h1 className="text-center font-serif text-2xl text-ink">Upskilling</h1>
         <p className="mt-1 text-center text-sm text-muted">
           Skills, discovered in your context of use.

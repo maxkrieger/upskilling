@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { ArrowUp, FileText, Image as ImageIcon, Paperclip, X } from "lucide-react";
 import type { Attachment, AttachmentKind, PresetPrompt } from "../../shared/types.ts";
 import { getProfile } from "../data/index.ts";
 import { useStore } from "../store.ts";
@@ -76,14 +77,15 @@ export function Composer({ showPresets }: { showPresets: boolean }) {
           {attachments.map((a) => (
             <span
               key={a.id}
-              className="inline-flex items-center gap-1 rounded-lg border border-border bg-elevated px-2 py-1 text-xs text-muted"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-elevated px-2 py-1 text-xs text-muted"
             >
-              {a.kind === "image" ? "🖼️" : "📄"} {a.name}
+              {a.kind === "image" ? <ImageIcon size={13} /> : <FileText size={13} />}
+              {a.name}
               <button
                 className="ml-1 text-faint hover:text-ink"
                 onClick={() => setAttachments((list) => list.filter((x) => x.id !== a.id))}
               >
-                ✕
+                <X size={13} />
               </button>
             </span>
           ))}
@@ -96,7 +98,7 @@ export function Composer({ showPresets }: { showPresets: boolean }) {
           className="rounded-lg px-2 py-2 text-muted hover:bg-elevated"
           title="Attach a file"
         >
-          📎
+          <Paperclip size={18} />
         </button>
         <input
           ref={fileRef}
@@ -121,9 +123,9 @@ export function Composer({ showPresets }: { showPresets: boolean }) {
         <button
           onClick={() => submit()}
           disabled={sending || !text.trim()}
-          className="rounded-lg bg-accent px-3 py-2 font-medium text-canvas hover:bg-accentSoft disabled:opacity-40"
+          className="flex items-center justify-center rounded-lg bg-accent px-3 py-2 font-medium text-canvas hover:bg-accentSoft disabled:opacity-40"
         >
-          {sending ? "…" : "↑"}
+          <ArrowUp size={18} />
         </button>
       </div>
       <div className="mt-2 text-center text-xs text-faint">

@@ -1,3 +1,4 @@
+import { Asterisk, FileText, Image as ImageIcon, Wand2 } from "lucide-react";
 import type { Message } from "../../shared/types.ts";
 import { useStore } from "../store.ts";
 import { Markdown } from "./Markdown.tsx";
@@ -10,9 +11,10 @@ function AttachmentChips({ message }: { message: Message }) {
       {message.attachments.map((a) => (
         <span
           key={a.id}
-          className="inline-flex items-center gap-1 rounded-lg border border-border bg-elevated px-2 py-1 text-xs text-muted"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-elevated px-2 py-1 text-xs text-muted"
         >
-          {a.kind === "image" ? "🖼️" : "📄"} {a.name}
+          {a.kind === "image" ? <ImageIcon size={13} /> : <FileText size={13} />}
+          {a.name}
         </span>
       ))}
     </div>
@@ -47,8 +49,8 @@ export function MessageView({
 
   return (
     <div className="flex gap-3">
-      <div className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent text-sm">
-        ✳
+      <div className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent text-canvas">
+        <Asterisk size={16} />
       </div>
       <div className="min-w-0 flex-1">
         {message.content ? (
@@ -69,8 +71,9 @@ export function MessageView({
         )}
 
         {applied.length > 0 && (
-          <div className="mt-2 text-xs text-faint">
-            ⚙ Applied skill{applied.length > 1 ? "s" : ""}:{" "}
+          <div className="mt-2 flex items-center gap-1 text-xs text-faint">
+            <Wand2 size={12} />
+            Applied skill{applied.length > 1 ? "s" : ""}:{" "}
             {applied.map((s) => s!.name).join(", ")}
           </div>
         )}
