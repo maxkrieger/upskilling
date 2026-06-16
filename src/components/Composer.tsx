@@ -139,7 +139,7 @@ export function Composer({ showPresets }: { showPresets: boolean }) {
             }
           }}
           rows={1}
-          placeholder={`Message ${profile.name}…`}
+          placeholder="Message Claude…"
           className="max-h-40 flex-1 resize-none bg-transparent px-1 py-2 text-ink outline-none placeholder:text-faint"
         />
         <button
