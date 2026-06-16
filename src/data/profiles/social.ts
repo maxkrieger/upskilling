@@ -142,6 +142,60 @@ export const socialProfile: Profile = {
         },
       ],
     },
+    // --- Cluster: instagram-art-caption (member 3; photograph) ---
+    {
+      id: "c_so_cap3",
+      profileId: "social",
+      title: "Caption: Photograph, A. Nwosu",
+      createdAt: "2026-05-28T11:20:00.000Z",
+      updatedAt: "2026-05-28T11:24:00.000Z",
+      messages: [
+        {
+          id: "m1",
+          role: "user",
+          content:
+            "Another caption please, same voice as always. Artist: Adaeze Nwosu. Title: 'Low Season'. Medium: archival pigment print. Year: 2025. Themes: emptied resort towns, the off-season, absence. Highbrow audience, no em dashes, no grandiosity, and add hashtags.",
+          createdAt: "2026-05-28T11:20:00.000Z",
+        },
+        {
+          id: "m2",
+          role: "assistant",
+          content:
+            "Adaeze Nwosu, *Low Season* (2025), archival pigment print.\n\nNwosu photographs a coastal town after the visitors have gone. A shuttered kiosk, a row of stacked chairs, a pool drained for the winter. The frame is patient with what is missing, and finds in the off-season a kind of composure that the crowds never allow. The color stays cool and even, closer to record than to mood.\n\nOn view now in the project space.\n\n#AdaezeNwosu #archivalpigmentprint #contemporaryphotography #fineartphotography #photography #colorphotography #galleryexhibition #photographyart #worksonpaper #photooftheday",
+          createdAt: "2026-05-28T11:23:00.000Z",
+        },
+        {
+          id: "m3",
+          role: "user",
+          content: "Lovely, exactly right.",
+          createdAt: "2026-05-28T11:24:00.000Z",
+        },
+      ],
+    },
+    // --- Cluster: artist-spotlight (member 1; studio visit, not yet repeated) ---
+    {
+      id: "c_so_spot1",
+      profileId: "social",
+      title: "Studio visit: T. Rivera",
+      createdAt: "2026-05-30T15:10:00.000Z",
+      updatedAt: "2026-05-30T15:15:00.000Z",
+      messages: [
+        {
+          id: "m1",
+          role: "user",
+          content:
+            "Write a short studio-visit / artist-spotlight Instagram post. Artist: Tomás Rivera. Medium: cyanotype on cotton. Working on a series called 'Saltmarsh' about tidal flats near where he grew up. He exposes the cloth outdoors at dawn and lets the fog affect the print. Highbrow audience, no em dashes, no grandiosity, and add hashtags.",
+          createdAt: "2026-05-30T15:10:00.000Z",
+        },
+        {
+          id: "m2",
+          role: "assistant",
+          content:
+            "Studio visit: Tomás Rivera.\n\nRivera makes his cyanotypes outdoors, laying treated cotton across the ground at dawn and letting the morning do part of the work. For the *Saltmarsh* series he returns to the tidal flats he grew up near, where the fog rolls in and softens the exposure in ways he cannot fully plan. What comes back is a record of a particular hour and a particular weather, fixed in Prussian blue. We spent the morning watching the cloth change as the light came up.\n\nMore from the series soon.\n\n#TomasRivera #cyanotype #alternativeprocess #studiovisit #contemporaryart #textileart #worksoncloth #bluework #artiststudio #fineart",
+          createdAt: "2026-05-30T15:14:00.000Z",
+        },
+      ],
+    },
     // --- Cluster: exhibition-announcement (member 1; not yet repeated) ---
     {
       id: "c_so_show1",
@@ -219,7 +273,7 @@ export const socialProfile: Profile = {
       id: "ws_so_caption",
       cluster: "instagram-art-caption",
       cueStatus: "none",
-      updatedAt: "2026-05-22T10:19:00.000Z",
+      updatedAt: "2026-05-28T11:24:00.000Z",
       members: [
         {
           conversationId: "c_so_cap1",
@@ -234,6 +288,28 @@ export const socialProfile: Profile = {
             "Wrote an Instagram caption for a Lena Brandt bronze 'same as last time'; asked for a 'highbrow audience', 'no em dashes', 'no grandiosity', and to 'add hashtags'.",
           quotes: ["highbrow audience", "no em dashes", "no grandiosity", "add hashtags"],
           cluster: "instagram-art-caption",
+        },
+        {
+          conversationId: "c_so_cap3",
+          summary:
+            "Wrote an Instagram caption for an Adaeze Nwosu photograph 'same voice as always'; asked for a 'highbrow audience', 'no em dashes', 'no grandiosity', and to 'add hashtags'.",
+          quotes: ["highbrow audience", "no em dashes", "no grandiosity", "add hashtags"],
+          cluster: "instagram-art-caption",
+        },
+      ],
+    },
+    {
+      id: "ws_so_spotlight",
+      cluster: "artist-spotlight",
+      cueStatus: "none",
+      updatedAt: "2026-05-30T15:15:00.000Z",
+      members: [
+        {
+          conversationId: "c_so_spot1",
+          summary:
+            "Wrote a studio-visit / artist-spotlight post for Tomás Rivera's cyanotype 'Saltmarsh' series; wanted a 'highbrow audience', 'no em dashes', 'no grandiosity', and to 'add hashtags'.",
+          quotes: ["highbrow audience", "no em dashes", "no grandiosity", "add hashtags"],
+          cluster: "artist-spotlight",
         },
       ],
     },

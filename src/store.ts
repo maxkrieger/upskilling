@@ -9,7 +9,8 @@ import type {
   WorkflowSet,
   WorkflowSummary,
 } from "../shared/types.ts";
-import { BUILTIN_SKILLS, getProfile, PROFILES } from "./data/index.ts";
+import { getProfile, PROFILES } from "./data/index.ts";
+import { BUILTIN_SKILLS } from "./data/builtinSkills.ts";
 import {
   deleteSkillRemote,
   extractWorkflow,

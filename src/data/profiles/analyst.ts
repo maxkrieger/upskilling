@@ -36,6 +36,19 @@ Comet,34
 Delta,-3
 Echo,21`;
 
+const TRAFFIC_CSV = `source,sessions_k
+Organic,184
+Direct,96
+Referral,52
+Paid,41
+Social,27`;
+
+const ACTUALS_CSV = `quarter,actual_musd,target_musd
+Q1,44,50
+Q2,38,45
+Q3,61,55
+Q4,52,60`;
+
 /**
  * Data Analyst persona. Primary workflow cluster: bar charts for decks with a
  * consistent house style (company palette, no gridlines, no legend, sorted).
@@ -54,6 +67,8 @@ export const analystProfile: Profile = {
     { id: "att_rev", name: "revenue_by_product.csv", kind: "csv", content: REVENUE_CSV },
     { id: "att_mau", name: "monthly_active_users.csv", kind: "csv", content: MAU_CSV },
     { id: "att_churn", name: "churn_by_segment.csv", kind: "csv", content: CHURN_CSV },
+    { id: "att_traffic", name: "traffic_sources.csv", kind: "csv", content: TRAFFIC_CSV },
+    { id: "att_actuals", name: "actuals_vs_target.csv", kind: "csv", content: ACTUALS_CSV },
   ],
 
   presets: [
@@ -188,6 +203,87 @@ export const analystProfile: Profile = {
         },
       ],
     },
+    // --- Cluster: trend-line-charts (member 1; not yet repeated) ---
+    {
+      id: "c_an_line1",
+      profileId: "analyst",
+      title: "MAU trend line",
+      createdAt: "2026-05-22T13:40:00.000Z",
+      updatedAt: "2026-05-22T13:45:00.000Z",
+      messages: [
+        {
+          id: "m1",
+          role: "user",
+          content:
+            "Plot the MAU trend over the months as a line chart for the growth review. Company palette starting with #d97757, no gridlines, no legend.",
+          createdAt: "2026-05-22T13:40:00.000Z",
+          attachments: [
+            { id: "a_mau_line", name: "monthly_active_users.csv", kind: "csv", content: MAU_CSV },
+          ],
+        },
+        {
+          id: "m2",
+          role: "assistant",
+          content:
+            "Here's the MAU trend as a line chart in the house style — clay orange line, no gridlines or legend.\n\n```chart\n{\n  \"kind\": \"line\",\n  \"title\": \"Monthly Active Users (K)\",\n  \"data\": [{\"name\":\"Jan\",\"mau\":120},{\"name\":\"Feb\",\"mau\":128},{\"name\":\"Mar\",\"mau\":141},{\"name\":\"Apr\",\"mau\":150},{\"name\":\"May\",\"mau\":162},{\"name\":\"Jun\",\"mau\":171}],\n  \"xKey\": \"name\",\n  \"series\": [\"mau\"],\n  \"style\": {\"palette\":[\"#d97757\"],\"gridlines\":false,\"legend\":false}\n}\n```\n\nSteady climb to 171K in June, +42% since January.",
+          createdAt: "2026-05-22T13:43:00.000Z",
+        },
+      ],
+    },
+    // --- One-off: pie chart (traffic mix) ---
+    {
+      id: "c_an_pie1",
+      profileId: "analyst",
+      title: "Traffic source mix",
+      createdAt: "2026-05-26T10:15:00.000Z",
+      updatedAt: "2026-05-26T10:19:00.000Z",
+      messages: [
+        {
+          id: "m1",
+          role: "user",
+          content:
+            "Make a pie chart of our traffic source mix from this CSV for the marketing slide. Company palette, no legend.",
+          createdAt: "2026-05-26T10:15:00.000Z",
+          attachments: [
+            { id: "a_traffic", name: "traffic_sources.csv", kind: "csv", content: TRAFFIC_CSV },
+          ],
+        },
+        {
+          id: "m2",
+          role: "assistant",
+          content:
+            "Here's the traffic mix as a pie chart in the company palette.\n\n```chart\n{\n  \"kind\": \"pie\",\n  \"title\": \"Traffic Sources (sessions, K)\",\n  \"data\": [{\"name\":\"Organic\",\"sessions\":184},{\"name\":\"Direct\",\"sessions\":96},{\"name\":\"Referral\",\"sessions\":52},{\"name\":\"Paid\",\"sessions\":41},{\"name\":\"Social\",\"sessions\":27}],\n  \"xKey\": \"name\",\n  \"series\": [\"sessions\"],\n  \"style\": {\"palette\":[\"#d97757\",\"#c2613f\",\"#e0a08a\",\"#8c4a32\",\"#b4b2a8\"],\"legend\":false}\n}\n```\n\nOrganic dominates at 46% of sessions.",
+          createdAt: "2026-05-26T10:18:00.000Z",
+        },
+      ],
+    },
+    // --- One-off: grouped (multi-series) bar — actual vs. target ---
+    {
+      id: "c_an_grouped1",
+      profileId: "analyst",
+      title: "Actual vs. target by quarter",
+      createdAt: "2026-05-28T16:05:00.000Z",
+      updatedAt: "2026-05-28T16:11:00.000Z",
+      messages: [
+        {
+          id: "m1",
+          role: "user",
+          content:
+            "Grouped bar chart of actual vs. target revenue by quarter from this CSV for the board deck. Company palette, no gridlines, keep the legend on so they can tell the two series apart.",
+          createdAt: "2026-05-28T16:05:00.000Z",
+          attachments: [
+            { id: "a_actuals", name: "actuals_vs_target.csv", kind: "csv", content: ACTUALS_CSV },
+          ],
+        },
+        {
+          id: "m2",
+          role: "assistant",
+          content:
+            "Here's actual vs. target as a grouped bar chart — two series in the company palette, no gridlines, legend on.\n\n```chart\n{\n  \"kind\": \"bar\",\n  \"title\": \"Actual vs. Target Revenue ($M)\",\n  \"data\": [{\"name\":\"Q1\",\"actual\":44,\"target\":50},{\"name\":\"Q2\",\"actual\":38,\"target\":45},{\"name\":\"Q3\",\"actual\":61,\"target\":55},{\"name\":\"Q4\",\"actual\":52,\"target\":60}],\n  \"xKey\": \"name\",\n  \"series\": [\"actual\",\"target\"],\n  \"style\": {\"palette\":[\"#d97757\",\"#6b8e8a\"],\"gridlines\":false,\"legend\":true}\n}\n```\n\nQ3 was the only quarter that beat target; Q4 came in $8M short.",
+          createdAt: "2026-05-28T16:09:00.000Z",
+        },
+      ],
+    },
     // --- Spurious / personal Q&A (should NOT cue) ---
     {
       id: "c_an_spur1",
@@ -271,6 +367,21 @@ export const analystProfile: Profile = {
             "Summarized a metrics CSV into a 3-bullet exec summary (headline, WoW trend, one risk), 'under 60 words, no fluff'.",
           quotes: ["3-bullet exec summary", "under 60 words", "no fluff"],
           cluster: "weekly-metrics-summary",
+        },
+      ],
+    },
+    {
+      id: "ws_an_lines",
+      cluster: "trend-line-charts",
+      cueStatus: "none",
+      updatedAt: "2026-05-22T13:45:00.000Z",
+      members: [
+        {
+          conversationId: "c_an_line1",
+          summary:
+            "Plotted the MAU trend over the months as a line chart for the growth review; wanted the company palette (clay orange #d97757), 'no gridlines', 'no legend'.",
+          quotes: ["line chart", "company palette", "no gridlines", "no legend"],
+          cluster: "trend-line-charts",
         },
       ],
     },
