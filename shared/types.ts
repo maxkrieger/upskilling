@@ -43,8 +43,6 @@ export interface SkillCueBanner {
   /** The workflow set id this cue is about. */
   workflowSetId: string;
   suggestedName: string;
-  /** Short, self-justifying rationale shown to the user. */
-  rationale: string;
   status: "pending" | "accepted" | "dismissed" | "snoozed";
 }
 
@@ -209,7 +207,7 @@ export interface CueDecision {
   shouldCue: boolean;
   workflowSetId?: string;
   suggestedName?: string;
-  rationale?: string;
-  /** Instruction injected into the response model to voice the cue. */
-  modelInstruction?: string;
+  /** Concrete repeated preferences to name in the prose cue, e.g.
+   * "company palette, no gridlines, no legend, sorted descending". */
+  preferences?: string;
 }

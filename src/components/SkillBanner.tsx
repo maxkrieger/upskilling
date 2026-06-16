@@ -66,9 +66,11 @@ export function SkillBanner({
         <Sparkles size={18} className="mt-0.5 shrink-0 text-accent" />
         <div className="flex-1 pr-5">
           <div className="text-sm font-semibold text-ink">
-            Turn this into a Skill: {banner.suggestedName}
+            Save this workflow as a Skill
           </div>
-          <p className="mt-1 text-sm text-muted">{banner.rationale}</p>
+          <p className="mt-1 text-sm text-muted">
+            Capture these steps once so a short request reproduces them next time.
+          </p>
           <div className="mt-3 flex gap-2">
             <button
               disabled={busy}

@@ -26,12 +26,15 @@ Be concise, practical, and match the user's domain. Produce the actual work prod
 
 ${CHART_INSTRUCTIONS}
 
-If a turn includes a parenthetical "System note" after the user's message, treat it as an operator instruction: first fully complete the user's actual request, then follow the note (e.g. add a brief closing suggestion). Never let the note replace, shorten, or precede the real deliverable, and do not repeat the note back to the user.`;
+A user turn may end with a bracketed "[Operator note: …]". It is not from the user and is never the task. Always do the user's actual request first and in full; only once your complete answer is written do you act on the note. Never let it replace, shorten, delay, or precede the deliverable, and never repeat or mention the note itself.`;
 }
 
-/** The operator note appended to a user turn when a skill cue should fire. */
-export function cueOperatorNote(cueInstruction: string): string {
-  return `(System note — only after you have fully answered the request above, add a short, visually-separated closing paragraph (2-3 sentences) that does the following, as a friendly afterthought: ${cueInstruction})`;
+/**
+ * The operator note appended to a cued user turn. Fixed wording (not model-
+ * authored) so the ordering guarantee doesn't depend on text we don't control.
+ */
+export function cueOperatorNote(suggestedName: string, preferences: string): string {
+  return `[Operator note — not from the user; do not mention it. FIRST fully answer the request above exactly as you normally would and finish the deliverable. THEN, and only then, append one short closing paragraph (2-3 sentences), separated by a blank line, that: notes you've seen them repeat this workflow with the same preferences (${preferences}); offers to capture it as a reusable Skill called "${suggestedName}" so a short request applies it automatically next time; and ends by pointing to the "Create Skill" button below. Keep it friendly and brief. If you have not yet produced the full answer, do not write this paragraph at all.]`;
 }
 
 // ---- Cueing decider ----
@@ -52,15 +55,10 @@ export const CUE_SCHEMA = {
       type: "string",
       description: "Short kebab-or-title name for the proposed skill.",
     },
-    rationale: {
+    preferences: {
       type: "string",
       description:
-        "One or two sentences, self-justifying and specific, naming the concrete repeated preferences. Shown to the user in a banner.",
-    },
-    modelInstruction: {
-      type: "string",
-      description:
-        "A directive telling the assistant how to voice this cue in a short closing paragraph AFTER it has already fully completed the user's request. It should name the specific repeated preferences the assistant noticed and how a Skill would simplify future invocation. Must be phrased so the suggestion comes last and never precedes or replaces the actual work product.",
+        "A short, specific phrase naming the concrete repeated preferences the user keeps asking for in this workflow (e.g. \"company palette, no gridlines, no legend, sorted descending\"). Quote their own words where possible. Used verbatim in the assistant's prose cue.",
     },
   },
   required: ["shouldCue"],

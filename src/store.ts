@@ -177,6 +177,9 @@ export const useStore = create<State>()(
         });
 
         const enabledSkills = get().skills.filter((s) => s.enabled);
+        // Held back and attached only after the reply finishes streaming, so the
+        // cue banner reads as an inline follow-up to a complete response.
+        let pendingBanner: ChatMeta["banner"] | undefined;
 
         await streamChat(
           {
@@ -194,16 +197,14 @@ export const useStore = create<State>()(
           },
           {
             onMeta: (meta: ChatMeta) => {
+              pendingBanner = meta.banner; // shown after the reply streams in
               // Persist the agent handle (per profile) and session (per convo).
               set((s) => ({ agents: { ...s.agents, [pid]: meta.agent } }));
               writeConvos((c) => {
                 c.sessionId = meta.sessionId;
                 c.sessionAgentId = meta.agent.id;
                 const am = c.messages.find((m) => m.id === assistantMsg.id);
-                if (am) {
-                  am.appliedSkillIds = meta.appliedSkillIds;
-                  if (meta.banner) am.banner = meta.banner;
-                }
+                if (am) am.appliedSkillIds = meta.appliedSkillIds;
               });
             },
             onDelta: (delta) => {
@@ -220,6 +221,14 @@ export const useStore = create<State>()(
             },
           },
         );
+
+        // Attach the cue banner now that the full reply has streamed in.
+        if (pendingBanner) {
+          writeConvos((c) => {
+            const am = c.messages.find((m) => m.id === assistantMsg.id);
+            if (am) am.banner = pendingBanner;
+          });
+        }
 
         set({ sending: false });
         // Re-extract this conversation's workflow summary (overwrite on each turn).

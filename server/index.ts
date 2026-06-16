@@ -18,6 +18,7 @@ import {
   buildSkillCreatorSystem,
   buildSkillCreatorUser,
   buildSkillNarrationSystem,
+  cueOperatorNote,
   EXTRACT_SCHEMA,
   SKILL_SCHEMA,
 } from "./prompts.ts";
@@ -86,11 +87,12 @@ app.post("/api/chat", async (c) => {
       skills: body.skills ?? [],
     });
     if (decision.shouldCue && decision.workflowSetId) {
-      cueInstruction = decision.modelInstruction;
+      const suggestedName = decision.suggestedName ?? "New Skill";
+      // Fixed, strongly-ordered operator note (built here, not by the decider).
+      cueInstruction = cueOperatorNote(suggestedName, decision.preferences ?? "the same preferences");
       banner = {
         workflowSetId: decision.workflowSetId,
-        suggestedName: decision.suggestedName ?? "New Skill",
-        rationale: decision.rationale ?? "",
+        suggestedName,
         status: "pending",
       };
     }

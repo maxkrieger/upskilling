@@ -3,6 +3,7 @@ import type { Message } from "../../shared/types.ts";
 import { useStore } from "../store.ts";
 import { Markdown } from "./Markdown.tsx";
 import { SkillBanner } from "./SkillBanner.tsx";
+import { ThinkingGlyph } from "./ThinkingGlyph.tsx";
 
 function AttachmentChips({ message }: { message: Message }) {
   if (!message.attachments?.length) return null;
@@ -56,11 +57,14 @@ export function MessageView({
         {message.content ? (
           <Markdown content={message.content} />
         ) : streaming ? (
-          <div className="text-muted">
-            Thinking<span className="caret">▌</span>
+          <div className="flex items-center gap-2 text-muted">
+            <ThinkingGlyph className="text-lg text-accent" />
+            <span>Working…</span>
           </div>
         ) : null}
-        {streaming && message.content && <span className="caret text-muted">▌</span>}
+        {streaming && message.content && (
+          <ThinkingGlyph className="ml-1 align-middle text-accent" />
+        )}
 
         {message.banner && (
           <SkillBanner

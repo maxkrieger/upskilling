@@ -5,8 +5,8 @@ import type { CueDecision, Skill, WorkflowSet } from "../shared/types.ts";
 /**
  * The Skill cueing decider. Analyzes the latest user message against the user's
  * workflow index BEFORE the response model runs, deciding whether to nudge the
- * user to create a Skill. Returns a decision; when shouldCue, the caller injects
- * `modelInstruction` into the chat system prompt and surfaces a banner.
+ * user to create a Skill. Returns a decision; when shouldCue, the caller builds
+ * a fixed operator note from `preferences` and surfaces a static CTA banner.
  */
 export async function decideCue(params: {
   userMessage: string;

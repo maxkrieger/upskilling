@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { toFile } from "@anthropic-ai/sdk";
 import { anthropic } from "./anthropic.ts";
 import { ENV } from "./env.ts";
-import { buildAgentSystem, cueOperatorNote } from "./prompts.ts";
+import { buildAgentSystem } from "./prompts.ts";
 import type { AgentHandle, Attachment, Skill } from "../shared/types.ts";
 
 // The beta namespaces are fully typed in the SDK but verbose; we use a loosely
@@ -113,6 +113,44 @@ export async function ensureAgent(params: {
   return { id: agent.id, fingerprint: fp };
 }
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Emit a complete text block as small paced chunks so the client renders it as
+ * a stream. Fenced code blocks (e.g. ```chart) are emitted atomically so the
+ * chart parser never sees partial JSON. Total reveal is bounded (~1.2s).
+ */
+async function emitChunked(text: string, onText: (s: string) => void): Promise<void> {
+  const parts = text.split(/(```[\s\S]*?```)/g).filter(Boolean);
+  // Count word-ish chunks to scale the per-chunk delay for a bounded reveal.
+  const wordChunks = parts
+    .filter((p) => !p.startsWith("```"))
+    .reduce((n, p) => n + Math.ceil(p.split(/\s+/).filter(Boolean).length / 3), 0);
+  const delay = Math.max(8, Math.min(28, Math.floor(1200 / Math.max(1, wordChunks))));
+
+  for (const part of parts) {
+    if (part.startsWith("```")) {
+      onText(part);
+      await sleep(delay);
+      continue;
+    }
+    const tokens = part.split(/(\s+)/); // keep whitespace tokens
+    let buf = "";
+    let words = 0;
+    for (const tok of tokens) {
+      buf += tok;
+      if (tok.trim()) words++;
+      if (words >= 3) {
+        onText(buf);
+        buf = "";
+        words = 0;
+        await sleep(delay);
+      }
+    }
+    if (buf) onText(buf);
+  }
+}
+
 function attachmentsToText(attachments?: Attachment[]): string {
   if (!attachments?.length) return "";
   return (
@@ -162,8 +200,9 @@ export async function streamTurn(params: {
   const content: Array<{ type: "text"; text: string }> = [
     { type: "text", text: params.userText + attachmentsToText(params.attachments) },
   ];
+  // cueInstruction is the already-formatted operator note (see prompts.ts).
   if (params.cueInstruction) {
-    content.push({ type: "text", text: cueOperatorNote(params.cueInstruction) });
+    content.push({ type: "text", text: params.cueInstruction });
   }
 
   // Stream-first, then send.
@@ -175,7 +214,9 @@ export async function streamTurn(params: {
   for await (const ev of stream) {
     if (ev.type === "agent.message") {
       for (const b of ev.content ?? []) {
-        if (b.type === "text" && b.text) params.onText(b.text);
+        // Managed Agents has no token-delta events — each agent.message is a
+        // complete block. Pace it into small chunks so the UI streams it.
+        if (b.type === "text" && b.text) await emitChunked(b.text, params.onText);
       }
     } else if (ev.type === "session.error") {
       throw new Error(ev.error?.message ?? "session error");
