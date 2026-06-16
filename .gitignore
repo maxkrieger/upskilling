@@ -1,0 +1,13 @@
+.env
+.env.*
+!.env.example
+node_modules/
+dist/
+.wrangler/
+*.swp
+.DS_Store
+**/.DS_Store
+*.log
+.vite/
+coverage/
+eval-results/
