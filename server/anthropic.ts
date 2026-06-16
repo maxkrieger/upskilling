@@ -57,7 +57,8 @@ export type StreamHandlers = {
  */
 export async function streamChat(params: {
   system: string;
-  messages: Anthropic.MessageParam[];
+  /** May include a mid-conversation `{role:"system"}` turn (beta). */
+  messages: any[];
   model?: string;
   maxTokens?: number;
   /** `{ skills: [{ type, skill_id, version }] }` to attach Skills. */

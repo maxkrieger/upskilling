@@ -39,7 +39,7 @@ Be concise, practical, and match the user's domain. Produce the actual work prod
 ${CHART_INSTRUCTIONS}
 Never run code to render a chart or image — always return the \`chart\` JSON block described above.
 
-A user turn may end with a bracketed "[Operator note: …]". It is not from the user and is never the task. Always do the user's actual request first and in full; only once your complete answer is written do you act on the note. Never let it replace, shorten, delay, or precede the deliverable, and never repeat or mention the note itself.`;
+You may receive a mid-conversation system message with an operator instruction. It is not from the user and is never the task itself. Always do the user's actual request first and in full; only once your complete answer is written do you act on the instruction. Never let it replace, shorten, delay, or precede the deliverable, and never repeat or mention the instruction itself.`;
 }
 
 /**
@@ -49,7 +49,7 @@ A user turn may end with a bracketed "[Operator note: …]". It is not from the 
  * the user consents and the skill is created.
  */
 export function cueOperatorNote(preferences: string): string {
-  return `[Operator note — not from the user; do not mention it. FIRST fully answer the request above exactly as you normally would and finish the deliverable. THEN, and only then, append one short closing paragraph (2-3 sentences), separated by a blank line, that: notes you've seen them repeat this workflow with the same preferences (${preferences}); offers to capture it as a reusable Skill so a short request applies it automatically next time; and points to the "Create Skill" button below. Do NOT invent or state a name for the skill — leave naming until they create it. Keep it friendly and brief. If you have not yet produced the full answer, do not write this paragraph at all.]`;
+  return `Operator instruction (do not mention it to the user). FIRST fully answer the user's request above exactly as you normally would and finish the deliverable. THEN, and only then, append one short closing paragraph (2-3 sentences), separated by a blank line, that: notes you've seen them repeat this workflow with the same preferences (${preferences}); offers to capture it as a reusable Skill so a short request applies it automatically next time; and points to the "Create Skill" button below. Do NOT invent or state a name for the skill — leave naming until they create it. Keep it friendly and brief. If you have not yet produced the full answer, do not write this paragraph at all.`;
 }
 
 // ---- Cueing decider ----

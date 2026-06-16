@@ -111,21 +111,21 @@ app.post("/api/chat", async (c) => {
       .map((s) => s.id),
   };
 
-  // Build the message history; deliver any cue as an operator note appended to
-  // the latest user turn (the client never displays what we send here).
-  const messages = toAnthropicMessages(body.messages ?? []);
-  if (cueInstruction) {
-    for (let i = messages.length - 1; i >= 0; i--) {
-      if (messages[i].role === "user") {
-        messages[i] = { ...messages[i], content: `${messages[i].content}\n\n${cueInstruction}` };
-        break;
-      }
-    }
-  }
+  // Build the message history. Deliver any cue as a mid-conversation system
+  // turn after the latest user message (beta), not appended to the user's text.
+  const messages: any[] = toAnthropicMessages(body.messages ?? []);
+  const betas: string[] = [];
 
   // Attach the user's enabled, registered skills via container.skills. With no
   // skills it's a plain streamed completion (no container/tool provisioning).
   const container = skillContainer(body.skills ?? []);
+  if (container) betas.push(...SKILLS_BETAS);
+
+  if (cueInstruction) {
+    messages.push({ role: "system", content: cueInstruction });
+    betas.push("mid-conversation-system-2026-04-07");
+  }
+
   const system = buildChatSystem({
     profileName: body.profileName ?? body.profileId,
     profileRole: body.profileRole ?? "",
@@ -139,7 +139,7 @@ app.post("/api/chat", async (c) => {
         messages,
         container: container ?? undefined,
         tools: container ? [CODE_EXECUTION_TOOL] : undefined,
-        betas: container ? SKILLS_BETAS : undefined,
+        betas: betas.length ? betas : undefined,
         handlers: {
           onText: (delta) => {
             void stream.writeSSE({ event: "delta", data: JSON.stringify({ text: delta }) });
