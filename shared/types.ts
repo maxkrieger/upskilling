@@ -132,6 +132,9 @@ export interface Profile {
   blurb: string;
   emoji: string;
   presets: PresetPrompt[];
+  /** Shown instead of `presets` once the user has an active skill in this
+   * profile — a different, looser set of starters that lean on the skill(s). */
+  loosePresets?: PresetPrompt[];
   attachments: Attachment[]; // shared assets referenced by presets/conversations
   conversations: Conversation[];
   workflowIndex: WorkflowSet[];

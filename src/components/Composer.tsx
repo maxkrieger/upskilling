@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { ArrowUp, FileText, Image as ImageIcon, Paperclip, X } from "lucide-react";
 import type { Attachment, AttachmentKind, PresetPrompt } from "../../shared/types.ts";
 import { getProfile } from "../data/index.ts";
@@ -17,7 +17,21 @@ export function Composer({ showPresets }: { showPresets: boolean }) {
   const sending = useStore((s) => s.sending);
   const sendMessage = useStore((s) => s.sendMessage);
   const openAttachment = useStore((s) => s.openAttachment);
+  const skills = useStore((s) => s.skills);
+  const indexOverrides = useStore((s) => s.indexOverrides);
   const profile = getProfile(activeProfileId)!;
+
+  // Once the user has an active skill in this profile, show the looser starter
+  // set that leans on it instead of the verbose, fully-specified defaults.
+  const hasActiveSkill = useMemo(() => {
+    for (const ws of useStore.getState().index(activeProfileId)) {
+      if (ws.skillId && skills.find((k) => k.id === ws.skillId)?.enabled) return true;
+    }
+    return false;
+  }, [activeProfileId, indexOverrides, skills]);
+
+  const presets =
+    hasActiveSkill && profile.loosePresets?.length ? profile.loosePresets : profile.presets;
 
   const [text, setText] = useState("");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -57,7 +71,7 @@ export function Composer({ showPresets }: { showPresets: boolean }) {
     <div className="mx-auto w-full max-w-3xl px-4 pb-6">
       {showPresets && (
         <div className="mb-3 flex flex-wrap gap-2">
-          {profile.presets.map((p) => (
+          {presets.map((p) => (
             <button
               key={p.id}
               onClick={() => runPreset(p)}

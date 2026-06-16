@@ -55,6 +55,31 @@ export const socialProfile: Profile = {
     },
   ],
 
+  // Shown once the user has an active caption skill — just the artwork facts;
+  // the skill supplies the highbrow voice, no-em-dash rule, and hashtags.
+  loosePresets: [
+    {
+      id: "p_so_l1",
+      title: "Caption: cyanotype",
+      subtitle: "Your caption skill applies the voice",
+      prompt:
+        "Caption for a new piece. Artist: Tomás Rivera. Title: 'Saltmarsh'. Medium: cyanotype on cotton. Year: 2024. Themes: tide, memory.",
+    },
+    {
+      id: "p_so_l2",
+      title: "Caption: bronze",
+      subtitle: "Your caption skill applies the voice",
+      prompt:
+        "Caption for a new sculpture. Artist: Lena Brandt. Title: 'Aftering'. Medium: cast bronze. Year: 2023. Themes: the persistence of form.",
+    },
+    {
+      id: "p_so_l3",
+      title: "Best time to post",
+      subtitle: "One-off question",
+      prompt: "What time of day should a gallery post on Instagram to get the most engagement?",
+    },
+  ],
+
   conversations: [
     // --- Cluster: instagram-art-caption (member 1) ---
     {

@@ -99,6 +99,32 @@ export const lawyerProfile: Profile = {
     },
   ],
 
+  // Shown once the user has an active NDA-review skill — terse asks that let the
+  // skill run the whole playbook.
+  loosePresets: [
+    {
+      id: "p_law_l1",
+      title: "Signable as-is?",
+      subtitle: "Your NDA playbook runs automatically",
+      prompt: "New NDA from Acme just landed — run it and tell me if it's signable.",
+      attachmentRefs: ["acme_nda.txt"],
+    },
+    {
+      id: "p_law_l2",
+      title: "Quick risk read",
+      subtitle: "Your NDA playbook runs automatically",
+      prompt: "Quick risk read on this vendor NDA before I forward it.",
+      attachmentRefs: ["vendor_nda.txt"],
+    },
+    {
+      id: "p_law_l3",
+      title: "Statute of limitations question",
+      subtitle: "One-off question",
+      prompt:
+        "What's the statute of limitations for a breach of written contract claim in California?",
+    },
+  ],
+
   conversations: [
     // --- Cluster: nda-review (member 1) ---
     {

@@ -62,14 +62,15 @@ export const analystProfile: Profile = {
       title: "Bar chart from a CSV",
       subtitle: "Revenue by product for the board deck",
       prompt:
-        "Make a bar chart of revenue by product from this CSV for the board deck.",
+        "Make a bar chart of revenue by product from this CSV for the board deck. Use our company palette starting with the clay orange #d97757, no gridlines, no legend, and sort the bars descending.",
       attachmentRefs: ["revenue_by_product.csv"],
     },
     {
       id: "p_an_2",
       title: "Churn bar chart",
       subtitle: "By customer segment",
-      prompt: "Bar chart of churn by segment from this file, for our QBR slide.",
+      prompt:
+        "Bar chart of churn by segment from this file for our QBR slide — company palette (#d97757 first), no gridlines, no legend, sorted descending.",
       attachmentRefs: ["churn_by_segment.csv"],
     },
     {
@@ -77,6 +78,31 @@ export const analystProfile: Profile = {
       title: "Explain a stats concept",
       subtitle: "One-off question",
       prompt: "What's the difference between standard deviation and standard error?",
+    },
+  ],
+
+  // Shown once the user has an active bar-chart skill — looser, varied asks that
+  // lean on it (no style spec, no CSV; the skill supplies the house style).
+  loosePresets: [
+    {
+      id: "p_an_l1",
+      title: "Headcount by team",
+      subtitle: "Your chart skill styles it",
+      prompt:
+        "Bar chart of headcount by department: Engineering 48, Sales 22, Marketing 14, Ops 9, Support 17.",
+    },
+    {
+      id: "p_an_l2",
+      title: "Revenue by region",
+      subtitle: "Your chart skill styles it",
+      prompt: "Quick bar chart of Q3 revenue by region: NA 120, EMEA 86, APAC 64, LATAM 31.",
+    },
+    {
+      id: "p_an_l3",
+      title: "Pipeline by stage",
+      subtitle: "Your chart skill styles it",
+      prompt:
+        "Chart deals by pipeline stage: Prospect 40, Qualified 25, Proposal 12, Closed 8.",
     },
   ],
 
