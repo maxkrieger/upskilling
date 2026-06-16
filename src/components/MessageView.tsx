@@ -9,15 +9,15 @@ function AttachmentChips({ message }: { message: Message }) {
   const openAttachment = useStore((s) => s.openAttachment);
   if (!message.attachments?.length) return null;
   return (
-    <div className="mb-2 flex flex-wrap gap-2">
+    <div className="mt-2 flex flex-wrap justify-end gap-2">
       {message.attachments.map((a) => (
         <button
           key={a.id}
           onClick={() => openAttachment(a)}
           title={`View ${a.name}`}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-elevated px-2 py-1 text-xs text-muted hover:border-accent/50 hover:text-ink"
+          className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-1.5 text-xs text-muted shadow-sm hover:border-accent/50 hover:text-ink"
         >
-          {a.kind === "image" ? <ImageIcon size={13} /> : <FileText size={13} />}
+          {a.kind === "image" ? <ImageIcon size={14} /> : <FileText size={14} />}
           {a.name}
         </button>
       ))}
@@ -42,11 +42,13 @@ export function MessageView({
 
   if (isUser) {
     return (
-      <div className="flex justify-end">
-        <div className="max-w-[80%] rounded-2xl bg-elevated px-4 py-3 text-ink">
-          <AttachmentChips message={message} />
-          <div className="prose-chat whitespace-pre-wrap">{message.content}</div>
-        </div>
+      <div className="flex flex-col items-end">
+        {message.content && (
+          <div className="max-w-[80%] rounded-2xl bg-elevated px-4 py-3 text-ink">
+            <div className="prose-chat whitespace-pre-wrap">{message.content}</div>
+          </div>
+        )}
+        <AttachmentChips message={message} />
       </div>
     );
   }

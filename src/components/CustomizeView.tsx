@@ -170,7 +170,7 @@ export function CustomizeView() {
               <div className="flex gap-2">
                 <button
                   onClick={create}
-                  className="rounded-lg bg-accent px-3 py-2 text-sm font-medium text-canvas hover:bg-accentSoft"
+                  className="rounded-lg bg-accent px-3 py-2 text-sm font-medium text-white hover:bg-accentSoft"
                 >
                   Create skill
                 </button>

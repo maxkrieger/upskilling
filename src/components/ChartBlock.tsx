@@ -15,14 +15,15 @@ import {
 } from "recharts";
 import type { ChartSpec } from "../../shared/types.ts";
 
-const DEFAULT_PALETTE = ["#d97757", "#c2613f", "#e0a08a", "#8c4a32", "#b4b2a8", "#6b8e8a"];
+const DEFAULT_PALETTE = ["#CF6B33", "#B85B28", "#E09B6F", "#8c4a32", "#C9A98C", "#6b8e8a"];
 
-const axisStyle = { fill: "#b4b2a8", fontSize: 12 };
+const axisStyle = { fill: "#6E6A62", fontSize: 12 };
+const GRID = "#E7E1D6";
 const tooltipStyle = {
-  background: "#30302e",
-  border: "1px solid #46443f",
+  background: "#FFFFFF",
+  border: "1px solid #E7E1D6",
   borderRadius: 8,
-  color: "#f5f4ef",
+  color: "#29251F",
 };
 
 export function ChartBlock({ spec }: { spec: ChartSpec }) {
@@ -45,10 +46,10 @@ export function ChartBlock({ spec }: { spec: ChartSpec }) {
       <ResponsiveContainer width="100%" height={260}>
         {spec.kind === "line" ? (
           <LineChart data={data} margin={{ top: 8, right: 12, bottom: 4, left: -12 }}>
-            {showGrid && <CartesianGrid stroke="#46443f" strokeDasharray="3 3" />}
-            <XAxis dataKey={spec.xKey} tick={axisStyle} stroke="#46443f" />
-            <YAxis tick={axisStyle} stroke="#46443f" />
-            <Tooltip contentStyle={tooltipStyle} cursor={{ stroke: "#46443f" }} />
+            {showGrid && <CartesianGrid stroke={GRID} strokeDasharray="3 3" />}
+            <XAxis dataKey={spec.xKey} tick={axisStyle} stroke={GRID} />
+            <YAxis tick={axisStyle} stroke={GRID} />
+            <Tooltip contentStyle={tooltipStyle} cursor={{ stroke: GRID }} />
             {showLegend && <Legend />}
             {spec.series.map((s, i) => (
               <Line
@@ -79,10 +80,10 @@ export function ChartBlock({ spec }: { spec: ChartSpec }) {
           </PieChart>
         ) : (
           <BarChart data={data} margin={{ top: 8, right: 12, bottom: 4, left: -12 }}>
-            {showGrid && <CartesianGrid stroke="#46443f" strokeDasharray="3 3" vertical={false} />}
-            <XAxis dataKey={spec.xKey} tick={axisStyle} stroke="#46443f" />
-            <YAxis tick={axisStyle} stroke="#46443f" />
-            <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "#3a3a37" }} />
+            {showGrid && <CartesianGrid stroke={GRID} strokeDasharray="3 3" vertical={false} />}
+            <XAxis dataKey={spec.xKey} tick={axisStyle} stroke={GRID} />
+            <YAxis tick={axisStyle} stroke={GRID} />
+            <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "#F1ECE3" }} />
             {showLegend && <Legend />}
             {spec.series.map((s, si) => (
               <Bar

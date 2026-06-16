@@ -145,7 +145,7 @@ export function Composer({ showPresets }: { showPresets: boolean }) {
         <button
           onClick={() => submit()}
           disabled={sending || !text.trim()}
-          className="flex items-center justify-center rounded-lg bg-accent px-3 py-2 font-medium text-canvas hover:bg-accentSoft disabled:opacity-40"
+          className="flex items-center justify-center rounded-lg bg-accent px-3 py-2 font-medium text-white hover:bg-accentSoft disabled:opacity-40"
         >
           <ArrowUp size={18} />
         </button>

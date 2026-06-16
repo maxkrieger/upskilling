@@ -4,16 +4,18 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Claude.ai-ish warm neutral palette
-        canvas: "#262624",
-        surface: "#30302e",
-        elevated: "#3a3a37",
-        border: "#46443f",
-        ink: "#f5f4ef",
-        muted: "#b4b2a8",
-        faint: "#85837a",
-        accent: "#d97757", // Claude clay/orange
-        accentSoft: "#c2613f",
+        // Claude.ai light, warm-neutral palette
+        canvas: "#FBF8F2", // main chat background (cream)
+        surface: "#FFFFFF", // cards, composer, banner, chart
+        elevated: "#F1ECE3", // hover, user bubble, chips
+        sand: "#EFEAE0", // sidebar background (beige)
+        border: "#E7E1D6",
+        ink: "#29251F", // primary text
+        muted: "#6E6A62", // secondary text
+        faint: "#9C978C", // tertiary text
+        accent: "#CF6B33", // burnt orange
+        accentSoft: "#B85B28", // hover
+        peach: "#FBE8DC", // light-orange icon tiles
       },
       fontFamily: {
         sans: ["ui-sans-serif", "system-ui", "-apple-system", "Segoe UI", "sans-serif"],

@@ -79,7 +79,7 @@ export function SkillBanner({
   };
 
   return (
-    <div className="relative mt-3 rounded-xl border border-accent/40 bg-accent/10 p-4">
+    <div className="relative mt-3 rounded-2xl border border-border bg-surface p-4 shadow-sm">
       <button
         onClick={() => snoozeCue(conversationId, messageId)}
         title="Snooze skill suggestions"
@@ -88,17 +88,15 @@ export function SkillBanner({
       >
         <X size={15} />
       </button>
-      <div className="flex items-start gap-3">
-        {isUpdate ? (
-          <Wand2 size={18} className="mt-0.5 shrink-0 text-accent" />
-        ) : (
-          <Sparkles size={18} className="mt-0.5 shrink-0 text-accent" />
-        )}
-        <div className="flex-1 pr-5">
+      <div className="flex items-center gap-3">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-peach text-accent">
+          {isUpdate ? <Wand2 size={20} /> : <Sparkles size={20} />}
+        </div>
+        <div className="min-w-0 flex-1 pr-5">
           <div className="text-sm font-semibold text-ink">
             {isUpdate ? `Update your ${createdName} skill` : "Save this workflow as a Skill"}
           </div>
-          <p className="mt-1 text-sm text-muted">
+          <p className="mt-0.5 text-sm text-muted">
             {isUpdate
               ? `Add this new preference${banner.summary ? ` — ${banner.summary}` : ""} — so you don't have to repeat it.`
               : banner.summary
@@ -106,24 +104,24 @@ export function SkillBanner({
                 : "Capture this once so you don't have to repeat your instructions."}
           </p>
           {!isUpdate && banner.trigger && (
-            <p className="mt-1 text-xs text-faint">Applies {banner.trigger}.</p>
+            <p className="mt-0.5 text-xs text-faint">Applies {banner.trigger}.</p>
           )}
-          <div className="mt-3 flex gap-2">
-            <button
-              disabled={busy}
-              onClick={onAccept}
-              className="rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-canvas hover:bg-accentSoft disabled:opacity-60"
-            >
-              {isUpdate ? "Update Skill" : "Create Skill"}
-            </button>
-            <button
-              disabled={busy}
-              onClick={() => dismissCue(conversationId, messageId)}
-              className="rounded-lg border border-border px-3 py-1.5 text-sm text-muted hover:bg-elevated"
-            >
-              Not now
-            </button>
-          </div>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            disabled={busy}
+            onClick={() => dismissCue(conversationId, messageId)}
+            className="rounded-lg border border-border px-3 py-2 text-sm text-muted hover:bg-elevated disabled:opacity-60"
+          >
+            Not now
+          </button>
+          <button
+            disabled={busy}
+            onClick={onAccept}
+            className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accentSoft disabled:opacity-60"
+          >
+            {isUpdate ? "Update Skill" : "Create Skill"}
+          </button>
         </div>
       </div>
     </div>

@@ -42,7 +42,7 @@ export function Gate() {
           <button
             onClick={submit}
             disabled={busy || !password}
-            className="w-full rounded-lg bg-accent px-3 py-2 font-medium text-canvas hover:bg-accentSoft disabled:opacity-50"
+            className="w-full rounded-lg bg-accent px-3 py-2 font-medium text-white hover:bg-accentSoft disabled:opacity-50"
           >
             {busy ? "Checking…" : "Enter"}
           </button>
