@@ -2,6 +2,7 @@ import { useState } from "react";
 import { CheckCircle2, Sparkles, X } from "lucide-react";
 import type { SkillCueBanner } from "../../shared/types.ts";
 import { useStore } from "../store.ts";
+import { ThinkingGlyph } from "./ThinkingGlyph.tsx";
 
 /** Inline call-to-action banner cueing the user to capture a Skill. */
 export function SkillBanner({
@@ -41,16 +42,25 @@ export function SkillBanner({
     );
   }
 
+  // Once the user commits, the banner collapses to a compact line — the
+  // skill-creator itself streams as a turn in the conversation below.
+  if (busy && banner.status !== "accepted") {
+    return (
+      <div className="mt-3 flex items-center gap-2 text-xs text-faint">
+        <ThinkingGlyph className="text-accent" />
+        Creating Skill…
+      </div>
+    );
+  }
+
   if (banner.status === "accepted") {
     return (
-      <div className="mt-3 flex items-center justify-between rounded-xl border border-accent/40 bg-accent/10 px-4 py-3">
-        <div className="flex items-center gap-2 text-sm text-ink">
-          <CheckCircle2 size={16} className="text-accent" />
-          Created the <span className="font-semibold">{createdName}</span> skill. It’s now active.
-        </div>
+      <div className="mt-3 flex items-center gap-2 text-xs text-faint">
+        <CheckCircle2 size={14} className="text-accent" />
+        Skill created.
         <button
           onClick={() => setView("customize")}
-          className="rounded-lg border border-border px-3 py-1.5 text-xs text-muted hover:bg-elevated"
+          className="text-faint underline underline-offset-2 hover:text-accent"
         >
           View in Customize
         </button>
