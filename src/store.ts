@@ -305,7 +305,6 @@ export const useStore = create<State>()(
                   [pid]: [...(s.skillsByProfile[pid] ?? BUILTIN_SKILLS), skill],
                 },
               }));
-              writeAssistant((m) => (m.appliedSkillIds = [skill.id]));
               updateIndexSet(get, set, pid, wfSet.id, (ws) => {
                 ws.cueStatus = "accepted";
                 ws.skillId = skill.id;
@@ -389,7 +388,6 @@ export const useStore = create<State>()(
                   ),
                 },
               }));
-              writeAssistant((m) => (m.appliedSkillIds = [target.id]));
               updateMessageBanner(set, pid, conversationId, messageId, { status: "accepted" });
             },
             onError: (errMsg) => writeAssistant((m) => (m.content += `\n\n_⚠️ ${errMsg}_`)),
