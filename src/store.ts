@@ -48,6 +48,7 @@ interface State {
   toggleSkill: (id: string) => void;
   deleteSkill: (id: string) => void;
   addManualSkill: (name: string, description: string, instructions: string) => void;
+  clearAllData: () => void;
 }
 
 function mergeConversations(profileId: string, userConvos: Conversation[]): Conversation[] {
@@ -321,6 +322,17 @@ export const useStore = create<State>()(
             },
           ],
         })),
+
+      // Wipe all persisted state (skills, conversations, workflow index, auth)
+      // and reload to a clean first-run.
+      clearAllData: () => {
+        try {
+          localStorage.clear();
+        } catch {
+          /* ignore */
+        }
+        window.location.reload();
+      },
     }),
     {
       name: "upskilling-state",
