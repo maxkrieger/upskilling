@@ -142,6 +142,8 @@ export interface Profile {
 
 export interface ChatRequest {
   profileId: string;
+  profileName: string;
+  profileRole: string;
   /** Full prior message history for the conversation. */
   messages: Array<Pick<Message, "role" | "content" | "attachments">>;
   /** Currently enabled skills (builtin + user). */
