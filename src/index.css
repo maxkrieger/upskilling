@@ -1,0 +1,97 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: theme(colors.canvas);
+  color: theme(colors.ink);
+  font-family: theme(fontFamily.sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Markdown prose tweaks */
+.prose-chat {
+  line-height: 1.6;
+  font-size: 0.95rem;
+}
+.prose-chat p {
+  margin: 0.5rem 0;
+}
+.prose-chat ul,
+.prose-chat ol {
+  margin: 0.5rem 0;
+  padding-left: 1.25rem;
+}
+.prose-chat li {
+  margin: 0.2rem 0;
+}
+.prose-chat h1,
+.prose-chat h2,
+.prose-chat h3 {
+  font-weight: 600;
+  margin: 0.8rem 0 0.4rem;
+}
+.prose-chat code {
+  background: theme(colors.elevated);
+  padding: 0.1rem 0.3rem;
+  border-radius: 4px;
+  font-size: 0.85em;
+}
+.prose-chat pre {
+  background: theme(colors.elevated);
+  padding: 0.75rem;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 0.6rem 0;
+}
+.prose-chat pre code {
+  background: transparent;
+  padding: 0;
+}
+.prose-chat table {
+  border-collapse: collapse;
+  margin: 0.6rem 0;
+  width: 100%;
+  font-size: 0.85rem;
+}
+.prose-chat th,
+.prose-chat td {
+  border: 1px solid theme(colors.border);
+  padding: 0.4rem 0.6rem;
+  text-align: left;
+  vertical-align: top;
+}
+.prose-chat th {
+  background: theme(colors.elevated);
+}
+.prose-chat a {
+  color: theme(colors.accent);
+  text-decoration: underline;
+}
+.prose-chat strong {
+  color: theme(colors.ink);
+}
+
+/* Blinking caret for the streaming cursor */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+.caret {
+  animation: blink 1s step-start infinite;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 8px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: theme(colors.border);
+  border-radius: 4px;
+}
