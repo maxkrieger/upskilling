@@ -5,11 +5,11 @@ export default {
     extend: {
       colors: {
         // Claude.ai light, warm-neutral palette
-        canvas: "#FBF8F2", // main chat background (cream)
+        canvas: "#FCFBF8", // main chat background (near-white warm)
         surface: "#FFFFFF", // cards, composer, banner, chart
-        elevated: "#F1ECE3", // hover, user bubble, chips
-        sand: "#EFEAE0", // sidebar background (beige)
-        border: "#E7E1D6",
+        elevated: "#F2EFE9", // hover, user bubble, chips
+        sand: "#F5F3EE", // sidebar background (light warm)
+        border: "#E9E4DA",
         ink: "#29251F", // primary text
         muted: "#6E6A62", // secondary text
         faint: "#9C978C", // tertiary text

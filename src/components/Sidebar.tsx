@@ -103,7 +103,6 @@ export function Sidebar() {
             }`}
             title={c.title}
           >
-            {c.userCreated ? "" : "· "}
             {c.title}
           </button>
         ))}

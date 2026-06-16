@@ -4,6 +4,22 @@ import { useStore } from "../store.ts";
 import { Composer } from "./Composer.tsx";
 import { MessageView } from "./MessageView.tsx";
 
+function greeting(): string {
+  const h = new Date().getHours();
+  return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
+}
+
+/** An 8-spoke starburst, echoing Claude's sparkle mark. */
+function SparkBurst({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" aria-hidden>
+      <g stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+        <path d="M12 2v20M2 12h20M5 5l14 14M19 5L5 19" />
+      </g>
+    </svg>
+  );
+}
+
 export function ChatView() {
   const activeProfileId = useStore((s) => s.activeProfileId);
   const activeConversationId = useStore((s) => s.activeConversationId);
@@ -29,11 +45,11 @@ export function ChatView() {
       <div ref={scrollRef} className="scrollbar-thin flex-1 overflow-y-auto">
         {isEmpty ? (
           <div className="mx-auto flex h-full max-w-3xl flex-col items-center justify-center px-4 text-center">
-            <div className="mb-3 text-5xl">{profile.emoji}</div>
-            <h1 className="font-serif text-3xl text-ink">
-              How can I help, {profile.name}?
-            </h1>
-            <p className="mt-2 max-w-md text-sm text-muted">{profile.blurb}</p>
+            <div className="flex items-center gap-3">
+              <SparkBurst className="h-9 w-9 text-accent" />
+              <h1 className="font-serif text-4xl text-ink">{greeting()}</h1>
+            </div>
+            <p className="mt-3 max-w-md text-sm text-muted">{profile.blurb}</p>
             <p className="mt-6 text-xs text-faint">
               Try a starter below — repeating a familiar workflow will surface a Skill suggestion.
             </p>
