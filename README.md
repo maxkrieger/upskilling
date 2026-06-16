@@ -89,6 +89,23 @@ Reports precision/recall/F1 for the cueing decider over a labeled dataset
 / first-occurrence negatives) and key-preference coverage for generated skills.
 Results are written to `eval-results/`.
 
+## Error alerting (Discord)
+
+Runtime errors route to a Discord webhook in deployment. Set `DISCORD_WEBHOOK_URL`
+in the environment; alerts fire when `NODE_ENV=production` (or force with
+`DISCORD_ALERTS=true`, silence with `DISCORD_ALERTS=false`).
+
+Covered paths:
+
+- **Backend** — `app.onError` (any uncaught route error), the chat stream and
+  cue-decider catches, and Node `uncaughtException`/`unhandledRejection`.
+  Implemented with global `fetch`, so it also works in Cloudflare Pages Functions.
+- **Frontend** — `window.error` / `unhandledrejection` listeners and a React
+  `ErrorBoundary` POST to `/api/report-error`, which forwards to Discord.
+
+Alerts are deduped (60s per fingerprint) and never block or break a request.
+Verify the wiring with `node scripts/test-discord.mjs` (sends one test alert).
+
 ## Models
 
 - Chat: `claude-opus-4-8` (streaming)

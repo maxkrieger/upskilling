@@ -48,7 +48,12 @@ ${skillsBlock(params.skills)}
 
 ${
     params.cueInstruction
-      ? `## Important: suggest a skill at the end of this reply\n${params.cueInstruction}`
+      ? `## After answering: suggest a skill
+FIRST, fully and normally complete the user's actual request — produce the real work product (the chart, draft, analysis, etc.) exactly as you would without this note. Do not mention skills until that work is done.
+
+THEN, only after your complete answer, add a short closing paragraph (2-3 sentences, visually separated) that naturally suggests capturing this as a Skill. The suggestion must read as a friendly afterthought that follows your work, never as the opening of your reply, and must never replace, shorten, or interrupt the deliverable.
+
+Specific guidance for this turn: ${params.cueInstruction}`
       : ""
   }`.trim();
 }
@@ -79,7 +84,7 @@ export const CUE_SCHEMA = {
     modelInstruction: {
       type: "string",
       description:
-        "An instruction telling the assistant how to briefly voice this cue at the END of its normal reply: explain what it noticed and how a Skill would simplify future invocation. Phrased as a directive to the assistant.",
+        "A directive telling the assistant how to voice this cue in a short closing paragraph AFTER it has already fully completed the user's request. It should name the specific repeated preferences the assistant noticed and how a Skill would simplify future invocation. Must be phrased so the suggestion comes last and never precedes or replaces the actual work product.",
     },
   },
   required: ["shouldCue"],

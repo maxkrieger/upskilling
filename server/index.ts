@@ -5,6 +5,7 @@ import { streamSSE } from "hono/streaming";
 import { ENV } from "./env.ts";
 import { jsonCall, streamChat } from "./anthropic.ts";
 import { decideCue } from "./cue.ts";
+import { reportError } from "./discord.ts";
 import {
   buildChatSystem,
   buildExtractUser,
@@ -28,9 +29,33 @@ import type {
 const app = new Hono();
 app.use("/api/*", cors());
 
+// Global handler: any uncaught route error is alerted to Discord and returns 500.
+app.onError((err, c) => {
+  void reportError(err, {
+    source: `${c.req.method} ${new URL(c.req.url).pathname}`,
+  });
+  console.error("[api] unhandled error:", err);
+  return c.json({ error: "internal_error" }, 500);
+});
+
 app.get("/api/health", (c) =>
   c.json({ ok: true, model: ENV.MODEL_MAIN, hasKey: !!ENV.ANTHROPIC_API_KEY }),
 );
+
+// ---- Client-side runtime errors forwarded from the SPA. ----
+app.post("/api/report-error", async (c) => {
+  const body = await c.req.json<{
+    message: string;
+    stack?: string;
+    url?: string;
+    kind?: string;
+  }>();
+  const err = new Error(body.message || "Unknown client error");
+  err.name = body.kind ? `ClientError(${body.kind})` : "ClientError";
+  if (body.stack) err.stack = body.stack;
+  await reportError(err, { source: "client", details: { url: body.url } });
+  return c.json({ ok: true });
+});
 
 // ---- Auth: simple shared-password check for the demo gate. ----
 app.post("/api/auth", async (c) => {
@@ -65,6 +90,7 @@ app.post("/api/chat", async (c) => {
       }
     } catch (err) {
       console.error("[cue] failed:", err);
+      void reportError(err, { source: "POST /api/chat (cue decider)" });
     }
   }
 
@@ -91,6 +117,10 @@ app.post("/api/chat", async (c) => {
       });
     } catch (err) {
       console.error("[chat] stream error:", err);
+      void reportError(err, {
+        source: "POST /api/chat (stream)",
+        details: { profile: body.profileId },
+      });
       await stream.writeSSE({
         event: "error",
         data: JSON.stringify({ message: (err as Error).message }),
@@ -168,6 +198,16 @@ app.post("/api/skills/create", async (c) => {
   };
   const resp: CreateSkillResponse = { skill };
   return c.json(resp);
+});
+
+// Process-level crash alerting (Node runtime only; CF Pages uses app.onError).
+process.on("unhandledRejection", (reason) => {
+  console.error("[api] unhandledRejection:", reason);
+  void reportError(reason, { source: "process.unhandledRejection" });
+});
+process.on("uncaughtException", (err) => {
+  console.error("[api] uncaughtException:", err);
+  void reportError(err, { source: "process.uncaughtException" });
 });
 
 serve({ fetch: app.fetch, port: ENV.API_PORT }, (info) => {
