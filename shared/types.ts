@@ -41,11 +41,16 @@ export interface ChartStyle {
 /** Inline call-to-action attached to an assistant message cueing skill creation. */
 export interface SkillCueBanner {
   /** The workflow set id this cue is about. */
-  workflowSetId: string;
+  /** "create" a new skill, or "update" an existing one with a new criterion. */
+  kind: "create" | "update";
+  /** create: the workflow set this cue is about. */
+  workflowSetId?: string;
+  /** update: the existing (local) skill id to update. */
+  targetSkillId?: string;
   suggestedName: string;
-  /** Short, dynamic summary of the captured knowledge (the repeated preferences). */
+  /** Dynamic summary: the repeated preferences (create) or new criterion (update). */
   summary?: string;
-  /** When the skill applies (the trigger condition), shown for transparency. */
+  /** create only: when the skill applies (the trigger condition). */
   trigger?: string;
   status: "pending" | "accepted" | "dismissed" | "snoozed";
 }
@@ -190,10 +195,24 @@ export interface CreateSkillResponse {
 
 export interface CueDecision {
   shouldCue: boolean;
+  kind?: "create" | "update";
   workflowSetId?: string;
+  /** update: id of the existing active skill to update. */
+  targetSkillId?: string;
   suggestedName?: string;
-  /** Concrete repeated preferences to name in the prose cue. */
+  /** Concrete repeated preferences to name in the prose cue (create). */
   preferences?: string;
-  /** When the skill applies (task/context that triggers it). */
+  /** When the skill applies (task/context that triggers it) (create). */
   trigger?: string;
+  /** update: the single new standing preference the user introduced. */
+  newCriterion?: string;
+}
+
+export interface UpdateSkillRequest {
+  /** The existing skill to update (carries skillId for versioning). */
+  skill: Skill;
+  /** The new standing preference/criterion to fold in. */
+  newCriterion: string;
+  /** Recent conversation for grounding. */
+  conversation: Pick<Conversation, "messages">;
 }

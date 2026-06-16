@@ -10,6 +10,7 @@ import {
   CODE_EXECUTION_TOOL,
   deleteSkillRemote,
   registerSkill,
+  registerSkillVersion,
   skillContainer,
   SKILLS_BETAS,
 } from "./skills.ts";
@@ -19,7 +20,10 @@ import {
   buildSkillCreatorSystem,
   buildSkillCreatorUser,
   buildSkillNarrationSystem,
+  buildSkillUpdateNarrationSystem,
+  buildSkillUpdateUser,
   cueOperatorNote,
+  updateOperatorNote,
   EXTRACT_SCHEMA,
   SKILL_SCHEMA,
 } from "./prompts.ts";
@@ -32,6 +36,7 @@ import type {
   ExtractRequest,
   ExtractResponse,
   Skill,
+  UpdateSkillRequest,
   WorkflowSummary,
 } from "../shared/types.ts";
 
@@ -87,7 +92,20 @@ app.post("/api/chat", async (c) => {
       workflowIndex: body.workflowIndex ?? [],
       skills: body.skills ?? [],
     });
-    if (decision.shouldCue && decision.workflowSetId) {
+    if (decision.shouldCue && decision.kind === "update" && decision.targetSkillId) {
+      const sk = (body.skills ?? []).find((s) => s.id === decision.targetSkillId);
+      cueInstruction = updateOperatorNote({
+        skillName: sk?.name ?? "your skill",
+        newCriterion: decision.newCriterion ?? "this new preference",
+      });
+      banner = {
+        kind: "update",
+        targetSkillId: decision.targetSkillId,
+        suggestedName: sk?.name ?? "Skill",
+        summary: decision.newCriterion,
+        status: "pending",
+      };
+    } else if (decision.shouldCue && decision.workflowSetId) {
       // Fixed, strongly-ordered operator note (built here, not by the decider).
       // It does not name the skill — the name is revealed only after creation.
       cueInstruction = cueOperatorNote({
@@ -95,6 +113,7 @@ app.post("/api/chat", async (c) => {
         trigger: decision.trigger ?? "this kind of task",
       });
       banner = {
+        kind: "create",
         workflowSetId: decision.workflowSetId,
         suggestedName: decision.suggestedName ?? "New Skill",
         summary: decision.preferences,
@@ -267,6 +286,75 @@ app.post("/api/skills/create", async (c) => {
         event: "error",
         data: JSON.stringify({ message: (err as Error).message }),
       });
+    }
+    await stream.writeSSE({ event: "done", data: "{}" });
+  });
+});
+
+// ---- Update an existing skill in-chat: fold in a new criterion, register a
+// new version, stream the skill-creator narration. ----
+app.post("/api/skills/update", async (c) => {
+  const body = await c.req.json<UpdateSkillRequest>();
+  const user = buildSkillUpdateUser({
+    skill: {
+      name: body.skill.name,
+      description: body.skill.description,
+      instructions: body.skill.instructions,
+    },
+    newCriterion: body.newCriterion,
+    conversationText: conversationToText(body.conversation),
+  });
+
+  return streamSSE(c, async (stream) => {
+    try {
+      // Phase 1: narrate the update as a chat turn.
+      await streamChat({
+        system: buildSkillUpdateNarrationSystem(),
+        messages: [{ role: "user", content: user }],
+        model: ENV.MODEL_MAIN,
+        maxTokens: 500,
+        handlers: {
+          onText: (delta) => {
+            void stream.writeSSE({ event: "delta", data: JSON.stringify({ text: delta }) });
+          },
+        },
+      });
+
+      // Phase 2: produce the updated SKILL.md.
+      const result = await jsonCall<{ name: string; description: string; instructions: string }>({
+        system: buildSkillCreatorSystem(),
+        user,
+        schema: SKILL_SCHEMA as unknown as Record<string, unknown>,
+        model: ENV.MODEL_MAIN,
+        maxTokens: 2000,
+      });
+
+      // Phase 3: register a new version (or fall back to a new skill).
+      let skillId = body.skill.skillId;
+      let skillVersion = body.skill.skillVersion;
+      try {
+        if (skillId) {
+          ({ skillVersion } = await registerSkillVersion(skillId, result));
+        } else {
+          ({ skillId, skillVersion } = await registerSkill(result));
+        }
+      } catch (e) {
+        console.error("[skills/update] version register failed:", e);
+      }
+
+      const skill: Skill = {
+        ...body.skill,
+        name: result.name,
+        description: result.description,
+        instructions: result.instructions,
+        skillId,
+        skillVersion,
+      };
+      await stream.writeSSE({ event: "skill", data: JSON.stringify({ skill } satisfies CreateSkillResponse) });
+    } catch (err) {
+      console.error("[skills/update] error:", err);
+      void reportError(err, { source: "POST /api/skills/update" });
+      await stream.writeSSE({ event: "error", data: JSON.stringify({ message: (err as Error).message }) });
     }
     await stream.writeSSE({ event: "done", data: "{}" });
   });

@@ -33,6 +33,19 @@ export async function registerSkill(params: {
   return { skillId: created.id, skillVersion: String(created.latest_version ?? "1") };
 }
 
+/** Register a NEW VERSION of an existing skill (in-place update). */
+export async function registerSkillVersion(
+  skillId: string,
+  params: { name: string; description: string; instructions: string },
+): Promise<{ skillVersion: string }> {
+  const slug = slugify(params.name);
+  const skillMd = `---\nname: ${slug}\ndescription: ${params.description.replace(/\n/g, " ")}\n---\n\n${params.instructions}\n`;
+  const created = await beta.skills.versions.create(skillId, {
+    files: [await toFile(Buffer.from(skillMd), `${slug}/SKILL.md`)],
+  });
+  return { skillVersion: String(created.version ?? created.latest_version ?? "1") };
+}
+
 /** Best-effort delete of a registered skill (all versions first, then the skill). */
 export async function deleteSkillRemote(skillId: string): Promise<void> {
   try {

@@ -17,6 +17,7 @@ import {
   registerSkillRemote,
   streamChat,
   streamCreateSkill,
+  streamUpdateSkill,
 } from "./api.ts";
 
 const uid = (p: string) => `${p}_${Math.random().toString(36).slice(2, 10)}`;
@@ -56,6 +57,7 @@ interface State {
   newConversation: () => void;
   sendMessage: (text: string, attachments?: Attachment[]) => Promise<void>;
   acceptCue: (conversationId: string, messageId: string) => Promise<void>;
+  acceptUpdate: (conversationId: string, messageId: string) => Promise<void>;
   dismissCue: (conversationId: string, messageId: string) => void;
   snoozeCue: (conversationId: string, messageId: string) => void;
   toggleSkill: (id: string) => void;
@@ -319,12 +321,91 @@ export const useStore = create<State>()(
         set({ sending: false });
       },
 
+      // ---- Accept an update cue: re-run the skill-creator over the existing
+      // skill + the new criterion, registering a new version in place. ----
+      acceptUpdate: async (conversationId, messageId) => {
+        const pid = get().activeProfileId;
+        const convo = get().conversations(pid).find((c) => c.id === conversationId);
+        const banner = convo?.messages.find((m) => m.id === messageId)?.banner;
+        if (!banner || banner.kind !== "update" || get().sending) return;
+        const target = get()
+          .skillsOf(pid)
+          .find((s) => s.id === banner.targetSkillId);
+        if (!target) return;
+
+        const assistantId = uid("m");
+        const turn: Message[] = [
+          {
+            id: uid("m"),
+            role: "user",
+            content: `Update my "${target.name}" skill: ${banner.summary ?? "add this preference"}.`,
+            createdAt: now(),
+          },
+          { id: assistantId, role: "assistant", content: "", createdAt: now() },
+        ];
+
+        const writeAssistant = (mutate: (m: Message) => void) => {
+          set((s) => {
+            const list = [...(s.userConversations[pid] ?? [])];
+            const ci = list.findIndex((c) => c.id === conversationId);
+            if (ci === -1) return s;
+            const c2 = { ...list[ci], messages: [...list[ci].messages] };
+            const mi = c2.messages.findIndex((m) => m.id === assistantId);
+            if (mi === -1) return s;
+            c2.messages[mi] = { ...c2.messages[mi] };
+            mutate(c2.messages[mi]);
+            c2.updatedAt = now();
+            list[ci] = c2;
+            return { userConversations: { ...s.userConversations, [pid]: list } };
+          });
+        };
+
+        // Recent conversation context for grounding the new preference.
+        const recent = (convo?.messages ?? [])
+          .filter((m) => m.content.trim())
+          .slice(-6)
+          .map((m) => ({ role: m.role, content: m.content, attachments: m.attachments } as Message));
+
+        set((s) => {
+          const list = [...(s.userConversations[pid] ?? [])];
+          const ci = list.findIndex((c) => c.id === conversationId);
+          if (ci === -1) return s;
+          const c2 = { ...list[ci], messages: [...list[ci].messages, ...turn], updatedAt: now() };
+          list[ci] = c2;
+          return { sending: true, userConversations: { ...s.userConversations, [pid]: list } };
+        });
+
+        await streamUpdateSkill(
+          { skill: target, newCriterion: banner.summary ?? "", conversation: { messages: recent } },
+          {
+            onDelta: (delta) => writeAssistant((m) => (m.content += delta)),
+            onSkill: (skill) => {
+              // Replace the skill in place (same local id).
+              set((s) => ({
+                skillsByProfile: {
+                  ...s.skillsByProfile,
+                  [pid]: (s.skillsByProfile[pid] ?? BUILTIN_SKILLS).map((sk) =>
+                    sk.id === target.id ? { ...skill, id: target.id } : sk,
+                  ),
+                },
+              }));
+              writeAssistant((m) => (m.appliedSkillIds = [target.id]));
+              updateMessageBanner(set, pid, conversationId, messageId, { status: "accepted" });
+            },
+            onError: (errMsg) => writeAssistant((m) => (m.content += `\n\n_⚠️ ${errMsg}_`)),
+          },
+        );
+
+        set({ sending: false });
+      },
+
       dismissCue: (conversationId, messageId) => {
         const pid = get().activeProfileId;
         const convo = get().conversations(pid).find((c) => c.id === conversationId);
         const banner = convo?.messages.find((m) => m.id === messageId)?.banner;
         updateMessageBanner(set, pid, conversationId, messageId, { status: "dismissed" });
-        if (banner) {
+        // Only "create" cues mark a workflow set rejected; updates have no set.
+        if (banner?.workflowSetId) {
           updateIndexSet(get, set, pid, banner.workflowSetId, (ws) => {
             ws.cueStatus = "rejected";
           });

@@ -52,33 +52,49 @@ export function cueOperatorNote(params: { preferences: string; trigger: string }
   return `Operator instruction (do not mention it to the user). FIRST fully answer the user's request above exactly as you normally would and finish the deliverable. THEN, and only then, append one short closing paragraph (2-3 sentences), separated by a blank line, that: notes you've seen them repeat this workflow with the same preferences (${params.preferences}); offers to capture it as a reusable Skill so they don't have to repeat these instructions; states clearly WHEN it would apply (${params.trigger}); and points to the "Create Skill" button below. Do NOT invent or state a name for the skill — leave naming until they create it. Keep it friendly and brief. If you have not yet produced the full answer, do not write this paragraph at all.`;
 }
 
-// ---- Cueing decider ----
+/** Operator note when the user states a new standing preference for an EXISTING skill. */
+export function updateOperatorNote(params: { skillName: string; newCriterion: string }): string {
+  return `Operator instruction (do not mention it to the user). FIRST fully answer the user's request above and finish the deliverable, applying the new preference they just stated. THEN append one short closing paragraph (1-2 sentences), separated by a blank line, that: notes this looks like a new standing preference for their existing "${params.skillName}" skill (specifically: ${params.newCriterion}); offers to fold it into that skill so they don't have to repeat it; and points to the "Update Skill" button below. Keep it friendly and brief. If you have not yet produced the full answer, do not write this paragraph at all.`;
+}
+
+// ---- Cueing decider (create a new skill, or update an existing one) ----
 
 export const CUE_SCHEMA = {
   type: "object",
   properties: {
-    shouldCue: {
-      type: "boolean",
+    shouldCue: { type: "boolean", description: "True if a create OR update cue is warranted." },
+    kind: {
+      type: "string",
+      enum: ["create", "update"],
       description:
-        "True only if the user has done a similar workflow before (a workflow set with >= 1 prior member matches), the know-how is cleanly capturable as a skill, and they have not already accepted/rejected a cue for it and no skill exists for it yet.",
+        "\"create\" = suggest a new skill for a repeated workflow with no skill yet. \"update\" = the user just stated a NEW standing preference for a workflow that ALREADY has an active skill, and it isn't already in that skill.",
     },
     workflowSetId: {
       type: "string",
-      description: "Id of the matching cueable workflow set, if shouldCue.",
+      description: "create only: id of the matching cueable workflow set.",
     },
     suggestedName: {
       type: "string",
-      description: "Short Title-case name for the proposed skill.",
+      description: "create only: short Title-case name for the proposed skill.",
     },
     preferences: {
       type: "string",
       description:
-        "A short, specific phrase naming the concrete repeated preferences the user keeps asking for (e.g. \"company palette, no gridlines, no legend, sorted descending\"). Quote their own words where possible.",
+        "create only: a short phrase naming the concrete repeated preferences (e.g. \"company palette, no gridlines, no legend, sorted descending\"). Quote the user where possible.",
     },
     trigger: {
       type: "string",
       description:
-        "A short phrase describing WHEN the skill applies — the task/context that triggers it, e.g. \"whenever you ask for a bar chart for a deck\". Task-based, never the user restating preferences.",
+        "create only: a short phrase for WHEN the skill applies — the task/context, e.g. \"whenever you ask for a bar chart for a deck\". Task-based, never the user restating preferences.",
+    },
+    targetSkillId: {
+      type: "string",
+      description: "update only: id of the existing active skill to update.",
+    },
+    newCriterion: {
+      type: "string",
+      description:
+        "update only: the single new standing preference the user just introduced, quoted/paraphrased concisely.",
     },
   },
   required: ["shouldCue"],
@@ -88,7 +104,7 @@ export const CUE_SCHEMA = {
 export function buildCueUser(params: {
   userMessage: string;
   workflowIndex: WorkflowSet[];
-  existingSkillNames: string[];
+  activeSkills: Array<{ id: string; name: string; description: string; instructions: string }>;
 }): string {
   const index = params.workflowIndex
     .map((set) => {
@@ -98,21 +114,34 @@ export function buildCueUser(params: {
       return `- set ${set.id} [cluster: ${set.cluster}] [status: ${set.cueStatus}]\n${members}`;
     })
     .join("\n");
+  const active = params.activeSkills
+    .map(
+      (s) =>
+        `- skill ${s.id} — "${s.name}": ${s.description}\n  current rules: ${s.instructions.replace(/\s+/g, " ").slice(0, 600)}`,
+    )
+    .join("\n");
 
-  return `Decide whether to cue the user to create a Skill based on their NEW message and their workflow history.
+  return `Decide whether to cue the user about a Skill, based on their NEW message, their workflow history, and their active skills. Pick exactly one of: create, update, or neither.
 
-Cue ONLY if ALL of these hold:
-1. The new message is a workflow the user has done at least once before (matches an existing set's cluster).
-2. The know-how is cleanly capturable in a Skill in a way that's retrospectively obvious.
-3. The user has NOT already accepted/rejected a cue for that set, and no skill exists for it yet (status must be "none").
+CREATE — cue ONLY if ALL hold:
+1. The new message is a workflow the user has done at least once before (matches a set's cluster below).
+2. The know-how is cleanly capturable as a Skill.
+3. No active skill already covers it and the set's status is "none".
+Return kind="create" with workflowSetId, suggestedName, preferences, trigger.
 
-Be conservative: a one-off task, a personal/Q&A question, or a brand-new workflow with no prior occurrence should NOT cue.
+UPDATE — cue ONLY if ALL hold:
+1. The new message clearly falls in the domain of one of the ACTIVE skills below.
+2. The user states a NEW standing preference (e.g. "from now on also…", "always…", "actually make…") that is NOT already in that skill's current rules.
+3. It reads as durable, not a one-off tweak for just this answer.
+Return kind="update" with targetSkillId and newCriterion.
 
-## Existing workflow index
+Otherwise shouldCue=false. Be conservative: one-off tasks, personal/Q&A, or brand-new workflows do NOT cue.
+
+## Workflow index (cueable — no skill yet)
 ${index || "(empty)"}
 
-## Existing skills already created
-${params.existingSkillNames.join(", ") || "(none)"}
+## Active skills (candidates for update)
+${active || "(none)"}
 
 ## New user message
 """
@@ -209,6 +238,32 @@ Write a short message (about 4-6 sentences, light markdown):
 3. Explain briefly how it'll work next time: a short request will auto-apply these preferences.
 
 Do not output code blocks, JSON, or a SKILL.md — just the conversational explanation. End on a confident note that the Skill is ready.`;
+}
+
+/** Conversational narration shown while an existing skill is updated in-chat. */
+export function buildSkillUpdateNarrationSystem(): string {
+  return `You are the skill-creator, updating an EXISTING skill the user already has, in a friendly first-person chat voice. Write 2-4 short sentences: confirm you're folding the new preference into the existing skill (name it), state the new criterion concretely (quote the user), and note it now applies automatically alongside what the skill already did. No code blocks or JSON.`;
+}
+
+/** Produce an updated SKILL.md that folds a new criterion into an existing skill. */
+export function buildSkillUpdateUser(params: {
+  skill: { name: string; description: string; instructions: string };
+  newCriterion: string;
+  conversationText: string;
+}): string {
+  return `Update the existing Skill below by folding in a NEW standing preference the user just expressed. Keep everything the skill already does and ADD the new criterion as another automatic default. Keep the same name. Keep the description triggering on the task (not on restating preferences). Return the full updated name, description, and instructions.
+
+## New preference to add
+${params.newCriterion}
+
+## Existing skill
+name: ${params.skill.name}
+description: ${params.skill.description}
+instructions:
+${params.skill.instructions}
+
+## Recent conversation (context)
+${params.conversationText}`;
 }
 
 export function buildSkillCreatorUser(params: {

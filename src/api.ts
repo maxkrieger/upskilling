@@ -5,6 +5,7 @@ import type {
   CreateSkillResponse,
   ExtractRequest,
   Skill,
+  UpdateSkillRequest,
   WorkflowSummary,
 } from "../shared/types.ts";
 
@@ -131,24 +132,21 @@ export interface CreateSkillStreamHandlers {
   onDone?: () => void;
 }
 
-/**
- * POST /api/skills/create and parse the SSE stream: narration `delta` events
- * followed by a single `skill` event with the finished SKILL.md.
- */
-export async function streamCreateSkill(
-  req: CreateSkillRequest,
+/** Shared SSE parser for the create/update skill streams (delta + skill events). */
+async function streamSkillEndpoint(
+  path: string,
+  body: unknown,
   handlers: CreateSkillStreamHandlers,
 ): Promise<void> {
-  const res = await fetch("/api/skills/create", {
+  const res = await fetch(path, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify(req),
+    body: JSON.stringify(body),
   });
   if (!res.ok || !res.body) {
-    handlers.onError?.(`create-skill request failed (${res.status})`);
+    handlers.onError?.(`skill request failed (${res.status})`);
     return;
   }
-
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
@@ -178,4 +176,20 @@ export async function streamCreateSkill(
     }
   }
   handlers.onDone?.();
+}
+
+/** Stream the skill-creator creating a new skill (narration + final skill). */
+export function streamCreateSkill(
+  req: CreateSkillRequest,
+  handlers: CreateSkillStreamHandlers,
+): Promise<void> {
+  return streamSkillEndpoint("/api/skills/create", req, handlers);
+}
+
+/** Stream the skill-creator updating an existing skill in place (new version). */
+export function streamUpdateSkill(
+  req: UpdateSkillRequest,
+  handlers: CreateSkillStreamHandlers,
+): Promise<void> {
+  return streamSkillEndpoint("/api/skills/update", req, handlers);
 }
