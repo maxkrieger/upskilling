@@ -12,6 +12,7 @@
     "preview": "vite preview",
     "eval": "tsx scripts/eval.ts",
     "extract:offline": "tsx scripts/extract-profiles.ts",
+    "cleanup:agents": "tsx scripts/cleanup-agents.ts",
     "smoke": "node scripts/smoke.mjs",
     "typecheck": "tsc --noEmit"
   },

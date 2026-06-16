@@ -86,6 +86,15 @@ The cueing decider and per-turn workflow extraction remain plain, stateless
 Messages-API calls. Cue instructions are delivered as an operator note on the
 user turn (the agent's system prompt is fixed at agent-create time).
 
+**Cleanup.** Managed Agents resources accumulate server-side. Archive the demo's
+agents and delete its sessions with:
+
+```bash
+npm run cleanup:agents            # sessions + agents (keeps skills + env)
+npm run cleanup:agents -- --dry   # preview only
+npm run cleanup:agents -- --all   # also delete skills + the shared environment
+```
+
 ### Skill cueing
 
 Before the response model sees a new user message, `decideCue` classifies it
