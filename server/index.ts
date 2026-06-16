@@ -7,7 +7,13 @@ import { jsonCall, streamChat } from "./anthropic.ts";
 import { decideCue } from "./cue.ts";
 import { reportError } from "./discord.ts";
 import {
-  buildChatSystem,
+  deleteSkillRemote,
+  ensureAgent,
+  ensureSession,
+  registerSkill,
+  streamTurn,
+} from "./managedAgents.ts";
+import {
   buildExtractUser,
   buildSkillCreatorSystem,
   buildSkillCreatorUser,
@@ -15,7 +21,7 @@ import {
   EXTRACT_SCHEMA,
   SKILL_SCHEMA,
 } from "./prompts.ts";
-import { conversationToText, id, toAnthropicMessages } from "./util.ts";
+import { conversationToText, id } from "./util.ts";
 import type {
   ChatMeta,
   ChatRequest,
@@ -65,63 +71,69 @@ app.post("/api/auth", async (c) => {
   return c.json({ ok });
 });
 
-// ---- Chat: cueing decider + streamed response. ----
+// ---- Chat: cueing decider + Managed Agents session turn (streamed). ----
 app.post("/api/chat", async (c) => {
   const body = await c.req.json<ChatRequest>();
-  const lastUser = [...body.messages].reverse().find((m) => m.role === "user");
 
-  // Run the cueing decider before the response model sees the message.
+  // Run the cueing decider (stateless Messages-API call) before the agent turn.
   let cueInstruction: string | undefined;
-  const meta: ChatMeta = { appliedSkillIds: [] };
-  if (lastUser) {
-    try {
-      const decision = await decideCue({
-        userMessage: lastUser.content,
-        workflowIndex: body.workflowIndex ?? [],
-        skills: body.skills ?? [],
-      });
-      if (decision.shouldCue && decision.workflowSetId) {
-        cueInstruction = decision.modelInstruction;
-        meta.banner = {
-          workflowSetId: decision.workflowSetId,
-          suggestedName: decision.suggestedName ?? "New Skill",
-          rationale: decision.rationale ?? "",
-          status: "pending",
-        };
-      }
-    } catch (err) {
-      console.error("[cue] failed:", err);
-      void reportError(err, { source: "POST /api/chat (cue decider)" });
+  let banner: ChatMeta["banner"];
+  try {
+    const decision = await decideCue({
+      userMessage: body.userText ?? "",
+      workflowIndex: body.workflowIndex ?? [],
+      skills: body.skills ?? [],
+    });
+    if (decision.shouldCue && decision.workflowSetId) {
+      cueInstruction = decision.modelInstruction;
+      banner = {
+        workflowSetId: decision.workflowSetId,
+        suggestedName: decision.suggestedName ?? "New Skill",
+        rationale: decision.rationale ?? "",
+        status: "pending",
+      };
     }
+  } catch (err) {
+    console.error("[cue] failed:", err);
+    void reportError(err, { source: "POST /api/chat (cue decider)" });
   }
 
-  meta.appliedSkillIds = (body.skills ?? []).filter((s) => s.enabled).map((s) => s.id);
-
-  const system = buildChatSystem({
-    profileName: body.profileName ?? body.profileId,
-    profileRole: body.profileRole ?? "",
-    skills: body.skills ?? [],
-    cueInstruction,
-  });
-
   return streamSSE(c, async (stream) => {
-    await stream.writeSSE({ event: "meta", data: JSON.stringify(meta) });
     try {
-      await streamChat({
-        system,
-        messages: toAnthropicMessages(body.messages),
-        handlers: {
-          onText: (delta) => {
-            void stream.writeSSE({ event: "delta", data: JSON.stringify({ text: delta }) });
-          },
+      // Ensure the agent (reuses the client's cached one if its skill set is
+      // unchanged) and the session, so meta can carry both back to the client.
+      const agent = await ensureAgent({
+        profileName: body.profileName ?? body.profileId,
+        profileRole: body.profileRole ?? "",
+        skills: body.skills ?? [],
+        clientAgent: body.agent,
+      });
+      const sessionId = await ensureSession({
+        agentId: agent.id,
+        sessionId: body.sessionId,
+        sessionAgentId: body.sessionAgentId,
+      });
+
+      const meta: ChatMeta = {
+        banner,
+        appliedSkillIds: (body.skills ?? []).filter((s) => s.enabled).map((s) => s.id),
+        agent,
+        sessionId,
+      };
+      await stream.writeSSE({ event: "meta", data: JSON.stringify(meta) });
+
+      await streamTurn({
+        sessionId,
+        userText: body.userText ?? "",
+        attachments: body.attachments,
+        cueInstruction,
+        onText: (delta) => {
+          void stream.writeSSE({ event: "delta", data: JSON.stringify({ text: delta }) });
         },
       });
     } catch (err) {
-      console.error("[chat] stream error:", err);
-      void reportError(err, {
-        source: "POST /api/chat (stream)",
-        details: { profile: body.profileId },
-      });
+      console.error("[chat] turn error:", err);
+      void reportError(err, { source: "POST /api/chat (agent turn)", details: { profile: body.profileId } });
       await stream.writeSSE({
         event: "error",
         data: JSON.stringify({ message: (err as Error).message }),
@@ -207,6 +219,14 @@ app.post("/api/skills/create", async (c) => {
         maxTokens: 2000,
       });
 
+      // Phase 3: register the SKILL.md with the official Skills API so the
+      // agent can load it natively.
+      const registered = await registerSkill({
+        name: result.name,
+        description: result.description,
+        instructions: result.instructions,
+      });
+
       const skill: Skill = {
         id: id("skill"),
         name: result.name,
@@ -216,6 +236,8 @@ app.post("/api/skills/create", async (c) => {
         fromWorkflowSetId: body.workflowSet.id,
         enabled: true,
         createdAt: new Date().toISOString(),
+        skillId: registered.skillId,
+        skillVersion: registered.skillVersion,
       };
       await stream.writeSSE({ event: "skill", data: JSON.stringify({ skill } satisfies CreateSkillResponse) });
     } catch (err) {
@@ -228,6 +250,20 @@ app.post("/api/skills/create", async (c) => {
     }
     await stream.writeSSE({ event: "done", data: "{}" });
   });
+});
+
+// ---- Register a hand-authored skill with the official Skills API. ----
+app.post("/api/skills/register", async (c) => {
+  const body = await c.req.json<{ name: string; description: string; instructions: string }>();
+  const registered = await registerSkill(body);
+  return c.json(registered);
+});
+
+// ---- Delete a registered skill from the official Skills API. ----
+app.post("/api/skills/delete", async (c) => {
+  const { skillId } = await c.req.json<{ skillId?: string }>();
+  if (skillId) await deleteSkillRemote(skillId);
+  return c.json({ ok: true });
 });
 
 // Process-level crash alerting (Node runtime only; CF Pages uses app.onError).

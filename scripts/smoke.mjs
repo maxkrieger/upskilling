@@ -51,15 +51,16 @@ try {
   log("clicked preset, waiting for stream...");
 
   // --- Wait for assistant text to stream in ---
+  // First turn provisions a Managed Agents container + agent, so allow time.
   await page.waitForFunction(
     () => document.body.innerText.length > 400,
-    { timeout: 40000 },
+    { timeout: 90000 },
   );
 
   // --- Wait for the Create Skill banner ---
   await page.waitForFunction(
     () => [...document.querySelectorAll("button")].some((b) => /Create Skill/i.test(b.textContent || "")),
-    { timeout: 40000 },
+    { timeout: 90000 },
   );
   log("✓ Create Skill banner appeared");
 
@@ -67,7 +68,7 @@ try {
   // finish emitting and parse the chart block.
   let hasChart = false;
   try {
-    await page.waitForSelector("svg.recharts-surface", { timeout: 15000 });
+    await page.waitForSelector("svg.recharts-surface", { timeout: 30000 });
     hasChart = true;
   } catch {}
   if (!hasChart) fail("chart did not render");

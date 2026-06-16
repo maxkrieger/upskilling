@@ -43,19 +43,48 @@ Try a one-off/personal question (e.g. "what's a p-value?") to confirm it does
 ```
 shared/types.ts        Domain model shared by frontend, backend, and scripts
 server/                Hono API (local: @hono/node-server; portable to CF Pages)
-  index.ts             Routes: /api/auth, /api/chat (SSE), /api/extract, /api/skills/create
-  cue.ts               Skill cueing decider (runs before the response model)
-  prompts.ts           System prompts + JSON schemas (chat, cue, extract, create)
+  index.ts             Routes: /api/auth, /api/chat (SSE), /api/extract,
+                       /api/skills/{create,register,delete}
+  managedAgents.ts     Managed Agents + Skills API orchestration (stateless)
+  cue.ts               Skill cueing decider (runs before the agent turn)
+  prompts.ts           System prompts + JSON schemas (agent, cue, extract, create)
   anthropic.ts         Streaming + forced-JSON tool-call helpers
 src/                   React SPA (Vite + Tailwind + zustand + Recharts)
   store.ts             localStorage-persisted state; per-turn workflow extraction
   data/profiles/*      Seeded personae + pre-extracted workflow indices
   components/          Chat, Sidebar, Composer, charts, cue banner, Customize
+  components/ui/       shadcn-style primitives (Radix Select)
 scripts/
   extract-profiles.ts  Offline workflow-extraction pipeline (npm run extract:offline)
   eval.ts              Cueing precision/recall/F1 + skill quality (npm run eval)
 lib/skills/skill-creator  The bundled skill-creator Skill
 ```
+
+### Managed Agents + Skills (stateless backend)
+
+Chat runs on the official **Managed Agents** API, and created skills are
+registered with the official **Skills API** — so Claude loads each skill
+natively (progressive disclosure), rather than us injecting SKILL.md text into a
+system prompt. The Hono backend stays stateless across users/isolates by keeping
+every durable id in the browser's `localStorage`:
+
+| Resource | Lifetime | Where the id lives |
+| --- | --- | --- |
+| Environment | one shared container template | server, lazily ensured by name (idempotent) |
+| Skill | per created skill | `localStorage` (`skillId` + version on the Skill) |
+| Agent | per (browser, profile), keyed by a skill-set fingerprint | `localStorage` (`agents[profileId]`) |
+| Session | per conversation (holds history server-side) | `localStorage` (on the Conversation) |
+
+On each turn the client sends its cached agent handle + session id; the server
+reuses them when the skill-set fingerprint still matches, otherwise creates a new
+agent/session and returns the new ids in the SSE `meta` event for the client to
+persist. Toggling/deleting a skill changes the fingerprint, so the next turn
+rebuilds the agent. Because sessions hold history, the client sends only the new
+user turn, not the full transcript.
+
+The cueing decider and per-turn workflow extraction remain plain, stateless
+Messages-API calls. Cue instructions are delivered as an operator note on the
+user turn (the agent's system prompt is fixed at agent-create time).
 
 ### Skill cueing
 

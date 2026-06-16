@@ -92,6 +92,38 @@ export async function extractWorkflow(
   return res.json();
 }
 
+/** Register a hand-authored skill with the official Skills API. */
+export async function registerSkillRemote(skill: {
+  name: string;
+  description: string;
+  instructions: string;
+}): Promise<{ skillId: string; skillVersion: string } | null> {
+  try {
+    const res = await fetch("/api/skills/register", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(skill),
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as { skillId: string; skillVersion: string };
+  } catch {
+    return null;
+  }
+}
+
+/** Best-effort: delete the registered skill from the official Skills API. */
+export async function deleteSkillRemote(skillId: string): Promise<void> {
+  try {
+    await fetch("/api/skills/delete", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ skillId }),
+    });
+  } catch {
+    /* ignore */
+  }
+}
+
 export interface CreateSkillStreamHandlers {
   onDelta?: (text: string) => void;
   onSkill?: (skill: Skill) => void;

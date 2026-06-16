@@ -1,16 +1,4 @@
-import type { Skill, WorkflowSet, Conversation } from "../shared/types.ts";
-
-/** Format the active skills block injected into the chat system prompt. */
-function skillsBlock(skills: Skill[]): string {
-  const active = skills.filter((s) => s.enabled);
-  if (active.length === 0) return "No custom skills are currently active.";
-  return active
-    .map(
-      (s) =>
-        `### Skill: ${s.name}\n${s.description}\n\nInstructions:\n${s.instructions}`,
-    )
-    .join("\n\n");
-}
+import type { WorkflowSet, Conversation } from "../shared/types.ts";
 
 export const CHART_INSTRUCTIONS = `When the user asks for a chart, graph, or visualization, emit a fenced code block with the language tag \`chart\` containing JSON of this shape:
 \`\`\`chart
@@ -26,36 +14,24 @@ export const CHART_INSTRUCTIONS = `When the user asks for a chart, graph, or vis
 Put a one-sentence lead-in before the block. Only include a \`style\` if a skill or the user specified styling preferences. Do not also describe the chart data in a table unless asked.`;
 
 /**
- * System prompt for the user-facing chat model. `cueInstruction` is injected by
- * the cueing decider when a skill should be suggested at the end of the reply.
+ * System prompt baked into the Managed Agents agent. Skills are attached to the
+ * agent natively (the model loads them on demand), so there is no skill-injection
+ * block here. Per-turn cue instructions are delivered as an operator note on the
+ * user turn, not in this (cached, fixed) system prompt.
  */
-export function buildChatSystem(params: {
-  profileName: string;
-  profileRole: string;
-  skills: Skill[];
-  cueInstruction?: string;
-}): string {
+export function buildAgentSystem(params: { profileName: string; profileRole: string }): string {
   return `You are Claude, helping a professional in this role: ${params.profileName} — ${params.profileRole}.
 
-Be concise, practical, and match the user's domain. Produce the actual work product they ask for (drafts, analyses, charts) rather than meta-commentary.
+Be concise, practical, and match the user's domain. Produce the actual work product they ask for (drafts, analyses, charts) rather than meta-commentary. When a request matches one of your skills, apply it silently — do not announce that you are using a skill.
 
 ${CHART_INSTRUCTIONS}
 
-## Active skills
-The user has these custom skills enabled. When a request matches a skill, silently apply its instructions to your output — do not announce that you are using a skill.
+If a turn includes a parenthetical "System note" after the user's message, treat it as an operator instruction: first fully complete the user's actual request, then follow the note (e.g. add a brief closing suggestion). Never let the note replace, shorten, or precede the real deliverable, and do not repeat the note back to the user.`;
+}
 
-${skillsBlock(params.skills)}
-
-${
-    params.cueInstruction
-      ? `## After answering: suggest a skill
-FIRST, fully and normally complete the user's actual request — produce the real work product (the chart, draft, analysis, etc.) exactly as you would without this note. Do not mention skills until that work is done.
-
-THEN, only after your complete answer, add a short closing paragraph (2-3 sentences, visually separated) that naturally suggests capturing this as a Skill. The suggestion must read as a friendly afterthought that follows your work, never as the opening of your reply, and must never replace, shorten, or interrupt the deliverable.
-
-Specific guidance for this turn: ${params.cueInstruction}`
-      : ""
-  }`.trim();
+/** The operator note appended to a user turn when a skill cue should fire. */
+export function cueOperatorNote(cueInstruction: string): string {
+  return `(System note — only after you have fully answered the request above, add a short, visually-separated closing paragraph (2-3 sentences) that does the following, as a friendly afterthought: ${cueInstruction})`;
 }
 
 // ---- Cueing decider ----

@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type {
+  AgentHandle,
   Attachment,
   ChatMeta,
   Conversation,
@@ -10,7 +11,13 @@ import type {
   WorkflowSummary,
 } from "../shared/types.ts";
 import { BUILTIN_SKILLS, getProfile, PROFILES } from "./data/index.ts";
-import { extractWorkflow, streamChat, streamCreateSkill } from "./api.ts";
+import {
+  deleteSkillRemote,
+  extractWorkflow,
+  registerSkillRemote,
+  streamChat,
+  streamCreateSkill,
+} from "./api.ts";
 
 const uid = (p: string) => `${p}_${Math.random().toString(36).slice(2, 10)}`;
 const now = () => new Date().toISOString();
@@ -30,6 +37,8 @@ interface State {
   indexOverrides: Record<string, WorkflowSet[]>;
   /** Skills for this browser (builtin + user-created). */
   skills: Skill[];
+  /** Managed Agents agent handle per profile (created lazily, cached here). */
+  agents: Record<string, AgentHandle>;
 
   // selectors
   conversations: (profileId?: string) => Conversation[];
@@ -47,7 +56,7 @@ interface State {
   dismissCue: (conversationId: string, messageId: string) => void;
   toggleSkill: (id: string) => void;
   deleteSkill: (id: string) => void;
-  addManualSkill: (name: string, description: string, instructions: string) => void;
+  addManualSkill: (name: string, description: string, instructions: string) => Promise<void>;
   clearAllData: () => void;
 }
 
@@ -69,6 +78,7 @@ export const useStore = create<State>()(
       userConversations: {},
       indexOverrides: {},
       skills: BUILTIN_SKILLS,
+      agents: {},
 
       conversations: (profileId) =>
         mergeConversations(
@@ -163,22 +173,27 @@ export const useStore = create<State>()(
         });
 
         const enabledSkills = get().skills.filter((s) => s.enabled);
-        const history = convo.messages
-          .filter((m) => m.id !== assistantMsg.id)
-          .map((m) => ({ role: m.role, content: m.content, attachments: m.attachments }));
 
         await streamChat(
           {
             profileId: pid,
             profileName: profile.name,
             profileRole: profile.role,
-            messages: history,
+            userText: text,
+            attachments,
             skills: enabledSkills,
             workflowIndex: get().index(pid),
+            agent: get().agents[pid],
+            sessionId: convo.sessionId,
+            sessionAgentId: convo.sessionAgentId,
           },
           {
             onMeta: (meta: ChatMeta) => {
+              // Persist the agent handle (per profile) and session (per convo).
+              set((s) => ({ agents: { ...s.agents, [pid]: meta.agent } }));
               writeConvos((c) => {
+                c.sessionId = meta.sessionId;
+                c.sessionAgentId = meta.agent.id;
                 const am = c.messages.find((m) => m.id === assistantMsg.id);
                 if (am) {
                   am.appliedSkillIds = meta.appliedSkillIds;
@@ -301,18 +316,25 @@ export const useStore = create<State>()(
           ),
         })),
 
-      deleteSkill: (id) =>
+      deleteSkill: (id) => {
+        const sk = get().skills.find((x) => x.id === id);
+        if (sk?.source === "builtin") return;
+        // Best-effort: also delete it from the official Skills API.
+        if (sk?.skillId) void deleteSkillRemote(sk.skillId);
+        // Invalidate cached agents so the next turn rebuilds without this skill.
         set((s) => ({
-          // Builtin skills (e.g. skill-creator) can never be removed.
-          skills: s.skills.filter((sk) => sk.source === "builtin" || sk.id !== id),
-        })),
+          skills: s.skills.filter((x) => x.id !== id),
+          agents: {},
+        }));
+      },
 
-      addManualSkill: (name, description, instructions) =>
+      addManualSkill: async (name, description, instructions) => {
+        const skillLocalId = uid("skill");
         set((s) => ({
           skills: [
             ...s.skills,
             {
-              id: uid("skill"),
+              id: skillLocalId,
               name,
               description,
               instructions,
@@ -321,7 +343,20 @@ export const useStore = create<State>()(
               createdAt: now(),
             },
           ],
-        })),
+          agents: {}, // force agent rebuild to include the new skill
+        }));
+        // Register with the official Skills API so the agent can load it.
+        const registered = await registerSkillRemote({ name, description, instructions });
+        if (registered) {
+          set((s) => ({
+            skills: s.skills.map((sk) =>
+              sk.id === skillLocalId
+                ? { ...sk, skillId: registered.skillId, skillVersion: registered.skillVersion }
+                : sk,
+            ),
+          }));
+        }
+      },
 
       // Wipe all persisted state (skills, conversations, workflow index, auth)
       // and reload to a clean first-run.
@@ -342,6 +377,7 @@ export const useStore = create<State>()(
         userConversations: s.userConversations,
         indexOverrides: s.indexOverrides,
         skills: s.skills,
+        agents: s.agents,
       }),
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<State>;
