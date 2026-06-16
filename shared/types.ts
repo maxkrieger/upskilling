@@ -43,6 +43,8 @@ export interface SkillCueBanner {
   /** The workflow set id this cue is about. */
   workflowSetId: string;
   suggestedName: string;
+  /** Short, dynamic summary of the captured knowledge (the repeated preferences). */
+  summary?: string;
   status: "pending" | "accepted" | "dismissed" | "snoozed";
 }
 

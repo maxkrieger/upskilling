@@ -94,6 +94,7 @@ app.post("/api/chat", async (c) => {
       banner = {
         workflowSetId: decision.workflowSetId,
         suggestedName: decision.suggestedName ?? "New Skill",
+        summary: decision.preferences,
         status: "pending",
       };
     }

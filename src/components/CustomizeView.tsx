@@ -1,131 +1,300 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import {
+  ChevronDown,
+  Code2,
+  Eye,
+  MessageCircle,
+  MoreVertical,
+  Plus,
+  Search,
+  Trash2,
+} from "lucide-react";
+import type { Skill } from "../../shared/types.ts";
 import { useStore } from "../store.ts";
+import { Markdown } from "./Markdown.tsx";
+
+function Switch({ on, onClick }: { on: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      role="switch"
+      aria-checked={on}
+      className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${on ? "bg-accent" : "bg-border"}`}
+    >
+      <span
+        className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${on ? "left-[1.125rem]" : "left-0.5"}`}
+      />
+    </button>
+  );
+}
+
+function addedBy(s: Skill): string {
+  if (s.source === "builtin") return "Anthropic";
+  return s.fromWorkflowSetId ? "Your workflow" : "You";
+}
+function triggerOf(s: Skill): string {
+  return s.id === "skill_creator_builtin" ? "Create-skill flow" : "Automatic";
+}
 
 export function CustomizeView() {
   const skills = useStore((s) => s.skillsByProfile[s.activeProfileId] ?? s.skillsOf());
   const toggleSkill = useStore((s) => s.toggleSkill);
   const deleteSkill = useStore((s) => s.deleteSkill);
   const addManualSkill = useStore((s) => s.addManualSkill);
+  const setView = useStore((s) => s.setView);
 
-  const [open, setOpen] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [query, setQuery] = useState("");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [raw, setRaw] = useState(false);
+
+  // form state
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [instructions, setInstructions] = useState("");
-  const [expanded, setExpanded] = useState<string | null>(null);
 
-  const create = () => {
+  const filtered = useMemo(
+    () => skills.filter((s) => s.name.toLowerCase().includes(query.toLowerCase())),
+    [skills, query],
+  );
+  const selected = skills.find((s) => s.id === selectedId) ?? filtered[0] ?? skills[0];
+
+  const create = async () => {
     if (!name.trim() || !description.trim()) return;
-    addManualSkill(name.trim(), description.trim(), instructions.trim());
+    await addManualSkill(name.trim(), description.trim(), instructions.trim());
     setName("");
     setDescription("");
     setInstructions("");
-    setOpen(false);
+    setCreating(false);
   };
 
   return (
-    <div className="scrollbar-thin h-full overflow-y-auto">
-      <div className="mx-auto max-w-3xl px-6 py-10">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="font-serif text-3xl text-ink">Customize · Skills</h1>
-            <p className="mt-1 text-sm text-muted">
-              Skills capture your repeated workflows so a short request reproduces your
-              preferences. They’re stored in this browser.
-            </p>
-          </div>
-          <button
-            onClick={() => setOpen((o) => !o)}
-            className="rounded-lg bg-accent px-3 py-2 text-sm font-medium text-canvas hover:bg-accentSoft"
-          >
-            {open ? "Cancel" : "+ New skill"}
-          </button>
-        </div>
-
-        {open && (
-          <div className="mt-4 space-y-2 rounded-xl border border-border bg-surface p-4">
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Skill name"
-              className="w-full rounded-lg border border-border bg-elevated px-3 py-2 text-sm text-ink outline-none focus:border-accent"
-            />
-            <input
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Description (when should this skill trigger?)"
-              className="w-full rounded-lg border border-border bg-elevated px-3 py-2 text-sm text-ink outline-none focus:border-accent"
-            />
-            <textarea
-              value={instructions}
-              onChange={(e) => setInstructions(e.target.value)}
-              placeholder="Instructions (the SKILL.md body)"
-              rows={5}
-              className="w-full rounded-lg border border-border bg-elevated px-3 py-2 text-sm text-ink outline-none focus:border-accent"
-            />
+    <div className="flex h-full">
+      {/* ---- List pane ---- */}
+      <div className="flex w-72 shrink-0 flex-col border-r border-border">
+        <div className="flex items-center justify-between gap-2 px-4 py-3">
+          <h2 className="text-lg font-medium text-ink">Skills</h2>
+          <div className="flex items-center gap-1 text-faint">
+            <Search size={16} className="opacity-70" />
             <button
-              onClick={create}
-              className="rounded-lg bg-accent px-3 py-2 text-sm font-medium text-canvas hover:bg-accentSoft"
+              onClick={() => {
+                setCreating(true);
+                setMenuOpen(false);
+              }}
+              title="New skill"
+              className="rounded-md p-1 hover:bg-elevated hover:text-ink"
             >
-              Create skill
+              <Plus size={18} />
             </button>
           </div>
-        )}
+        </div>
+        <div className="px-4 pb-2">
+          <div className="flex items-center gap-2 rounded-lg border border-border bg-elevated px-2 py-1.5">
+            <Search size={14} className="text-faint" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search skills"
+              className="w-full bg-transparent text-sm text-ink outline-none placeholder:text-faint"
+            />
+          </div>
+        </div>
 
-        <div className="mt-6 space-y-3">
-          {skills.map((s) => (
-            <div key={s.id} className="rounded-xl border border-border bg-surface p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-ink">{s.name}</span>
-                    {s.source === "builtin" && (
-                      <span className="rounded-full bg-elevated px-2 py-0.5 text-xs text-faint">
-                        built-in
-                      </span>
-                    )}
-                    {s.fromWorkflowSetId && (
-                      <span className="rounded-full bg-accent/20 px-2 py-0.5 text-xs text-accent">
-                        from your workflow
-                      </span>
-                    )}
+        <div className="scrollbar-thin flex-1 overflow-y-auto px-2 pb-3">
+          <div className="px-2 py-1 text-xs uppercase tracking-wide text-faint">
+            Personal skills
+          </div>
+          {filtered.map((s) => {
+            const active = !creating && s.id === selected?.id;
+            return (
+              <div key={s.id}>
+                <button
+                  onClick={() => {
+                    setSelectedId(s.id);
+                    setCreating(false);
+                    setMenuOpen(false);
+                  }}
+                  className={`flex w-full items-center justify-between gap-2 rounded-lg px-2 py-2 text-left text-sm ${
+                    active ? "bg-elevated text-ink" : "text-muted hover:bg-elevated/60 hover:text-ink"
+                  }`}
+                >
+                  <span className="truncate">{s.name}</span>
+                  <ChevronDown
+                    size={14}
+                    className={`shrink-0 transition-transform ${active ? "rotate-180 text-faint" : "text-faint/0"}`}
+                  />
+                </button>
+                {active && (
+                  <div className="mb-1 ml-3 border-l border-border pl-3 text-xs text-faint">
+                    <div className="rounded px-2 py-1">SKILL.md</div>
                   </div>
-                  <p className="mt-1 text-sm text-muted">{s.description}</p>
-                </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  <label className="flex cursor-pointer items-center gap-1 text-xs text-muted">
-                    <input
-                      type="checkbox"
-                      checked={s.enabled}
-                      onChange={() => toggleSkill(s.id)}
-                    />
-                    {s.enabled ? "On" : "Off"}
-                  </label>
-                  {s.source !== "builtin" && (
-                    <button
-                      onClick={() => deleteSkill(s.id)}
-                      className="text-xs text-faint hover:text-accent"
-                    >
-                      Delete
-                    </button>
+                )}
+              </div>
+            );
+          })}
+          {filtered.length === 0 && (
+            <div className="px-2 py-3 text-sm text-faint">No skills match.</div>
+          )}
+        </div>
+      </div>
+
+      {/* ---- Detail pane ---- */}
+      <div className="scrollbar-thin flex-1 overflow-y-auto">
+        {creating ? (
+          <div className="mx-auto max-w-3xl px-8 py-8">
+            <h1 className="font-serif text-2xl text-ink">New skill</h1>
+            <p className="mt-1 text-sm text-muted">
+              Hand-author a skill. It’s registered so Claude can load it when relevant.
+            </p>
+            <div className="mt-5 space-y-3">
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Skill name"
+                className="w-full rounded-lg border border-border bg-elevated px-3 py-2 text-sm text-ink outline-none focus:border-accent"
+              />
+              <input
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Description — what it does and when it should trigger"
+                className="w-full rounded-lg border border-border bg-elevated px-3 py-2 text-sm text-ink outline-none focus:border-accent"
+              />
+              <textarea
+                value={instructions}
+                onChange={(e) => setInstructions(e.target.value)}
+                placeholder="Instructions (the SKILL.md body)"
+                rows={10}
+                className="w-full rounded-lg border border-border bg-elevated px-3 py-2 text-sm text-ink outline-none focus:border-accent"
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={create}
+                  className="rounded-lg bg-accent px-3 py-2 text-sm font-medium text-canvas hover:bg-accentSoft"
+                >
+                  Create skill
+                </button>
+                <button
+                  onClick={() => setCreating(false)}
+                  className="rounded-lg border border-border px-3 py-2 text-sm text-muted hover:bg-elevated"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : selected ? (
+          <div className="mx-auto max-w-3xl px-8 py-7">
+            {/* Title row */}
+            <div className="flex items-start justify-between gap-3">
+              <h1 className="text-2xl font-medium text-ink">{selected.name}</h1>
+              <div className="flex items-center gap-2">
+                <Switch on={selected.enabled} onClick={() => toggleSkill(selected.id)} />
+                <div className="relative">
+                  <button
+                    onClick={() => setMenuOpen((o) => !o)}
+                    className="rounded-md p-1.5 text-faint hover:bg-elevated hover:text-ink"
+                    aria-label="Skill actions"
+                  >
+                    <MoreVertical size={18} />
+                  </button>
+                  {menuOpen && (
+                    <>
+                      <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+                      <div className="absolute right-0 z-20 mt-1 w-44 rounded-xl border border-border bg-surface p-1 shadow-xl">
+                        <button
+                          onClick={() => {
+                            setMenuOpen(false);
+                            setView("chat");
+                          }}
+                          className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted hover:bg-elevated hover:text-ink"
+                        >
+                          <MessageCircle size={15} /> Try in chat
+                        </button>
+                        {selected.source !== "builtin" && (
+                          <button
+                            onClick={() => {
+                              const id = selected.id;
+                              setMenuOpen(false);
+                              setSelectedId(null);
+                              deleteSkill(id);
+                            }}
+                            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-accent hover:bg-elevated"
+                          >
+                            <Trash2 size={15} /> Uninstall
+                          </button>
+                        )}
+                      </div>
+                    </>
                   )}
                 </div>
               </div>
-              {s.instructions && (
-                <button
-                  onClick={() => setExpanded(expanded === s.id ? null : s.id)}
-                  className="mt-2 text-xs text-faint hover:text-muted"
-                >
-                  {expanded === s.id ? "Hide" : "View"} instructions
-                </button>
-              )}
-              {expanded === s.id && (
-                <pre className="mt-2 whitespace-pre-wrap rounded-lg bg-elevated p-3 text-xs text-muted">
-                  {s.instructions}
-                </pre>
-              )}
             </div>
-          ))}
-        </div>
+
+            {/* Meta grid */}
+            <div className="mt-5 flex gap-12">
+              <div>
+                <div className="text-xs text-faint">Added by</div>
+                <div className="mt-0.5 text-sm text-ink">{addedBy(selected)}</div>
+              </div>
+              <div>
+                <div className="text-xs text-faint">Trigger</div>
+                <div className="mt-0.5 text-sm text-ink">{triggerOf(selected)}</div>
+              </div>
+              <div>
+                <div className="text-xs text-faint">Status</div>
+                <div className="mt-0.5 text-sm text-ink">
+                  {selected.enabled ? "Active" : "Off"}
+                  {selected.fromWorkflowSetId && " · from your workflow"}
+                </div>
+              </div>
+            </div>
+
+            {/* Description */}
+            <div className="mt-6">
+              <div className="text-xs text-faint">Description</div>
+              <p className="mt-1 text-sm leading-relaxed text-muted">{selected.description}</p>
+            </div>
+
+            {/* SKILL.md body */}
+            {selected.instructions && (
+              <div className="mt-5 rounded-2xl border border-border bg-surface">
+                <div className="flex items-center justify-between border-b border-border px-4 py-2">
+                  <span className="text-xs font-medium text-faint">SKILL.md</span>
+                  <div className="flex items-center gap-0.5 rounded-lg bg-elevated p-0.5">
+                    <button
+                      onClick={() => setRaw(false)}
+                      title="Rendered"
+                      className={`rounded-md p-1 ${!raw ? "bg-surface text-ink" : "text-faint"}`}
+                    >
+                      <Eye size={14} />
+                    </button>
+                    <button
+                      onClick={() => setRaw(true)}
+                      title="Source"
+                      className={`rounded-md p-1 ${raw ? "bg-surface text-ink" : "text-faint"}`}
+                    >
+                      <Code2 size={14} />
+                    </button>
+                  </div>
+                </div>
+                <div className="px-5 py-4">
+                  {raw ? (
+                    <pre className="scrollbar-thin overflow-x-auto whitespace-pre-wrap text-xs leading-relaxed text-muted">
+                      {selected.instructions}
+                    </pre>
+                  ) : (
+                    <Markdown content={selected.instructions} />
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="flex h-full items-center justify-center text-sm text-faint">
+            Select a skill
+          </div>
+        )}
       </div>
     </div>
   );

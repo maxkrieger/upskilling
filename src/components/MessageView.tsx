@@ -1,4 +1,4 @@
-import { Asterisk, FileText, Image as ImageIcon, Wand2 } from "lucide-react";
+import { FileText, Image as ImageIcon, Wand2 } from "lucide-react";
 import type { Message } from "../../shared/types.ts";
 import { useStore } from "../store.ts";
 import { Markdown } from "./Markdown.tsx";
@@ -52,10 +52,7 @@ export function MessageView({
   }
 
   return (
-    <div className="flex gap-3">
-      <div className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent text-canvas">
-        <Asterisk size={16} />
-      </div>
+    <div className="flex">
       <div className="min-w-0 flex-1">
         {message.content ? (
           <Markdown content={message.content} />
