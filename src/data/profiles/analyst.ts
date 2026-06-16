@@ -23,6 +23,19 @@ Mid-Market,4.8
 SMB,7.9
 Self-Serve,11.3`;
 
+const EARNINGS_CSV = `quarter,earnings_musd
+Q1,44
+Q2,38
+Q3,61
+Q4,52`;
+
+const GROWTH_CSV = `product,yoy_growth_pct
+Atlas,12
+Beacon,7
+Comet,34
+Delta,-3
+Echo,21`;
+
 /**
  * Data Analyst persona. Primary workflow cluster: bar charts for decks with a
  * consistent house style (company palette, no gridlines, no legend, sorted).
@@ -82,6 +95,9 @@ export const analystProfile: Profile = {
           content:
             "Make a bar chart of quarterly earnings for the deck. Use our company palette (start with the clay orange #d97757), no gridlines, no legend, and sort the bars descending.",
           createdAt: "2026-05-04T15:10:00.000Z",
+          attachments: [
+            { id: "a_earn", name: "quarterly_earnings.csv", kind: "csv", content: EARNINGS_CSV },
+          ],
         },
         {
           id: "m2",
@@ -106,6 +122,9 @@ export const analystProfile: Profile = {
           content:
             "Bar chart of growth across products. Same as always — company colors, no gridlines, no legend, sorted high to low.",
           createdAt: "2026-05-20T09:30:00.000Z",
+          attachments: [
+            { id: "a_growth", name: "product_growth.csv", kind: "csv", content: GROWTH_CSV },
+          ],
         },
         {
           id: "m2",

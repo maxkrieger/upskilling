@@ -10,7 +10,7 @@ import type {
   WorkflowSummary,
 } from "../shared/types.ts";
 import { BUILTIN_SKILLS, getProfile, PROFILES } from "./data/index.ts";
-import { createSkill, extractWorkflow, streamChat } from "./api.ts";
+import { extractWorkflow, streamChat, streamCreateSkill } from "./api.ts";
 
 const uid = (p: string) => `${p}_${Math.random().toString(36).slice(2, 10)}`;
 const now = () => new Date().toISOString();
@@ -205,13 +205,14 @@ export const useStore = create<State>()(
         void refreshIndexForConversation(get, set, pid, convo.id);
       },
 
-      // ---- Accept a cue: create the skill from the workflow set ----
+      // ---- Accept a cue: invoke the skill-creator as an interactive,
+      // streamed chat turn, then register the resulting skill. ----
       acceptCue: async (conversationId, messageId) => {
         const pid = get().activeProfileId;
         const convo = get().conversations(pid).find((c) => c.id === conversationId);
         const msg = convo?.messages.find((m) => m.id === messageId);
         const banner = msg?.banner;
-        if (!banner) return;
+        if (!banner || get().sending) return;
 
         const wfSet = get().index(pid).find((s) => s.id === banner.workflowSetId);
         if (!wfSet) return;
@@ -220,19 +221,64 @@ export const useStore = create<State>()(
           .conversations(pid)
           .filter((c) => wfSet.members.some((m) => m.conversationId === c.id));
 
-        try {
-          // Create the skill first; only then flip the banner to "accepted" so
-          // the UI never claims success before the skill actually exists.
-          const skill = await createSkill({ workflowSet: wfSet, conversations: memberConvos });
-          set((s) => ({ skills: [...s.skills, skill] }));
-          updateIndexSet(get, set, pid, wfSet.id, (ws) => {
-            ws.cueStatus = "accepted";
-            ws.skillId = skill.id;
+        // Append an interactive turn: the user's "create a skill" request and a
+        // streaming assistant reply from the skill-creator.
+        const assistantId = uid("m");
+        const turn: Message[] = [
+          {
+            id: uid("m"),
+            role: "user",
+            content: `Create a Skill for my ${wfSet.cluster.replace(/-/g, " ")} workflow.`,
+            createdAt: now(),
+          },
+          { id: assistantId, role: "assistant", content: "", createdAt: now() },
+        ];
+
+        const writeAssistant = (mutate: (m: Message) => void) => {
+          set((s) => {
+            const list = [...(s.userConversations[pid] ?? [])];
+            const ci = list.findIndex((c) => c.id === conversationId);
+            if (ci === -1) return s;
+            const c2 = { ...list[ci], messages: [...list[ci].messages] };
+            const mi = c2.messages.findIndex((m) => m.id === assistantId);
+            if (mi === -1) return s;
+            c2.messages[mi] = { ...c2.messages[mi] };
+            mutate(c2.messages[mi]);
+            c2.updatedAt = now();
+            list[ci] = c2;
+            return { userConversations: { ...s.userConversations, [pid]: list } };
           });
-          updateMessageBanner(set, pid, conversationId, messageId, { status: "accepted" });
-        } catch (e) {
-          // Leave the banner pending so the user can retry.
-        }
+        };
+
+        set((s) => {
+          const list = [...(s.userConversations[pid] ?? [])];
+          const ci = list.findIndex((c) => c.id === conversationId);
+          if (ci === -1) return s;
+          const c2 = { ...list[ci], messages: [...list[ci].messages, ...turn], updatedAt: now() };
+          list[ci] = c2;
+          return { sending: true, userConversations: { ...s.userConversations, [pid]: list } };
+        });
+
+        await streamCreateSkill(
+          { workflowSet: wfSet, conversations: memberConvos },
+          {
+            onDelta: (delta) => writeAssistant((m) => (m.content += delta)),
+            onSkill: (skill) => {
+              set((s) => ({ skills: [...s.skills, skill] }));
+              writeAssistant((m) => (m.appliedSkillIds = [skill.id]));
+              updateIndexSet(get, set, pid, wfSet.id, (ws) => {
+                ws.cueStatus = "accepted";
+                ws.skillId = skill.id;
+              });
+              // Flip the original cue banner to its "created" state.
+              updateMessageBanner(set, pid, conversationId, messageId, { status: "accepted" });
+            },
+            onError: (errMsg) =>
+              writeAssistant((m) => (m.content += `\n\n_⚠️ ${errMsg}_`)),
+          },
+        );
+
+        set({ sending: false });
       },
 
       dismissCue: (conversationId, messageId) => {

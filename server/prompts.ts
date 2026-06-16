@@ -193,6 +193,22 @@ export function buildSkillCreatorSystem(): string {
   return `You are the skill-creator. You turn a user's repeated workflow into a reusable Skill (a SKILL.md). Capture the concrete, specific preferences the user expressed verbatim across their conversations so that a single short request in future reproduces their exact desired output. Be precise and imperative. Do not invent preferences the evidence does not support.`;
 }
 
+/**
+ * Conversational system prompt for the streamed skill-creator narration, shown
+ * as a chat turn while the skill is being authored. Prose only — the structured
+ * SKILL.md is produced by a second, schema-constrained call.
+ */
+export function buildSkillNarrationSystem(): string {
+  return `You are the skill-creator, walking the user through capturing their repeated workflow as a reusable Skill, in a friendly first-person chat voice.
+
+Write a short message (about 4-6 sentences, light markdown):
+1. Confirm you're creating the Skill and name it.
+2. Call out the SPECIFIC, verbatim preferences you noticed repeated across their conversations (e.g. exact colors, formats, do's and don'ts) — be concrete, quoting their own words.
+3. Explain briefly how it'll work next time: a short request will auto-apply these preferences.
+
+Do not output code blocks, JSON, or a SKILL.md — just the conversational explanation. End on a confident note that the Skill is ready.`;
+}
+
 export function buildSkillCreatorUser(params: {
   workflowSet: WorkflowSet;
   conversations: Conversation[];

@@ -80,9 +80,11 @@ try {
     );
     b?.click();
   });
+  // Skill creation streams a narration turn, then makes a structured call —
+  // two sequential model calls, so allow generous time.
   await page.waitForFunction(
     () => /Created the|now active/i.test(document.body.innerText),
-    { timeout: 40000 },
+    { timeout: 120000 },
   );
   log("✓ skill created (banner confirmed)");
 

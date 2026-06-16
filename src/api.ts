@@ -92,12 +92,58 @@ export async function extractWorkflow(
   return res.json();
 }
 
-export async function createSkill(req: CreateSkillRequest): Promise<Skill> {
+export interface CreateSkillStreamHandlers {
+  onDelta?: (text: string) => void;
+  onSkill?: (skill: Skill) => void;
+  onError?: (message: string) => void;
+  onDone?: () => void;
+}
+
+/**
+ * POST /api/skills/create and parse the SSE stream: narration `delta` events
+ * followed by a single `skill` event with the finished SKILL.md.
+ */
+export async function streamCreateSkill(
+  req: CreateSkillRequest,
+  handlers: CreateSkillStreamHandlers,
+): Promise<void> {
   const res = await fetch("/api/skills/create", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(req),
   });
-  const json = (await res.json()) as CreateSkillResponse;
-  return json.skill;
+  if (!res.ok || !res.body) {
+    handlers.onError?.(`create-skill request failed (${res.status})`);
+    return;
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    let sep: number;
+    while ((sep = buffer.indexOf("\n\n")) !== -1) {
+      const raw = buffer.slice(0, sep);
+      buffer = buffer.slice(sep + 2);
+      let event = "message";
+      let data = "";
+      for (const line of raw.split("\n")) {
+        if (line.startsWith("event:")) event = line.slice(6).trim();
+        else if (line.startsWith("data:")) data += line.slice(5).trim();
+      }
+      if (!data) continue;
+      try {
+        const parsed = JSON.parse(data);
+        if (event === "delta") handlers.onDelta?.((parsed as { text: string }).text);
+        else if (event === "skill") handlers.onSkill?.((parsed as CreateSkillResponse).skill);
+        else if (event === "error") handlers.onError?.((parsed as { message: string }).message);
+      } catch {
+        /* ignore malformed event */
+      }
+    }
+  }
+  handlers.onDone?.();
 }

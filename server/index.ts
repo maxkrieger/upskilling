@@ -11,6 +11,7 @@ import {
   buildExtractUser,
   buildSkillCreatorSystem,
   buildSkillCreatorUser,
+  buildSkillNarrationSystem,
   EXTRACT_SCHEMA,
   SKILL_SCHEMA,
 } from "./prompts.ts";
@@ -169,35 +170,64 @@ app.post("/api/extract", async (c) => {
 });
 
 // ---- Create skill: invoke the skill-creator flow over a workflow set. ----
+// Streamed + interactive: first stream a conversational narration of what's
+// being captured, then emit the structured SKILL.md as a `skill` event.
 app.post("/api/skills/create", async (c) => {
   const body = await c.req.json<CreateSkillRequest>();
-  const result = await jsonCall<{
-    name: string;
-    description: string;
-    instructions: string;
-  }>({
-    system: buildSkillCreatorSystem(),
-    user: buildSkillCreatorUser({
-      workflowSet: body.workflowSet,
-      conversations: body.conversations ?? [],
-    }),
-    schema: SKILL_SCHEMA as unknown as Record<string, unknown>,
-    model: ENV.MODEL_MAIN,
-    maxTokens: 2000,
+  const user = buildSkillCreatorUser({
+    workflowSet: body.workflowSet,
+    conversations: body.conversations ?? [],
   });
 
-  const skill: Skill = {
-    id: id("skill"),
-    name: result.name,
-    description: result.description,
-    instructions: result.instructions,
-    source: "user",
-    fromWorkflowSetId: body.workflowSet.id,
-    enabled: true,
-    createdAt: new Date().toISOString(),
-  };
-  const resp: CreateSkillResponse = { skill };
-  return c.json(resp);
+  return streamSSE(c, async (stream) => {
+    try {
+      // Phase 1: stream the skill-creator's narration as a chat turn.
+      await streamChat({
+        system: buildSkillNarrationSystem(),
+        messages: [{ role: "user", content: user }],
+        model: ENV.MODEL_MAIN,
+        maxTokens: 700,
+        handlers: {
+          onText: (delta) => {
+            void stream.writeSSE({ event: "delta", data: JSON.stringify({ text: delta }) });
+          },
+        },
+      });
+
+      // Phase 2: produce the structured SKILL.md (schema-constrained).
+      const result = await jsonCall<{
+        name: string;
+        description: string;
+        instructions: string;
+      }>({
+        system: buildSkillCreatorSystem(),
+        user,
+        schema: SKILL_SCHEMA as unknown as Record<string, unknown>,
+        model: ENV.MODEL_MAIN,
+        maxTokens: 2000,
+      });
+
+      const skill: Skill = {
+        id: id("skill"),
+        name: result.name,
+        description: result.description,
+        instructions: result.instructions,
+        source: "user",
+        fromWorkflowSetId: body.workflowSet.id,
+        enabled: true,
+        createdAt: new Date().toISOString(),
+      };
+      await stream.writeSSE({ event: "skill", data: JSON.stringify({ skill } satisfies CreateSkillResponse) });
+    } catch (err) {
+      console.error("[skills/create] error:", err);
+      void reportError(err, { source: "POST /api/skills/create" });
+      await stream.writeSSE({
+        event: "error",
+        data: JSON.stringify({ message: (err as Error).message }),
+      });
+    }
+    await stream.writeSSE({ event: "done", data: "{}" });
+  });
 });
 
 // Process-level crash alerting (Node runtime only; CF Pages uses app.onError).
