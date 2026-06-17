@@ -10,387 +10,97 @@ import type { Profile } from "../../../shared/types.ts";
 
 const ACME_NDA = `MUTUAL NON-DISCLOSURE AGREEMENT
 
-This Mutual Non-Disclosure Agreement (this "Agreement") is made and entered into
-as of the date of last signature below (the "Effective Date") by and between Acme
-Robotics, Inc., a Delaware corporation having its principal place of business at
-1200 Innovation Parkway, Albany, New York ("Acme"), and the counterparty
-identified on the signature page hereto ("Counterparty"). Acme and Counterparty
-are referred to herein individually as a "Party" and collectively as the
-"Parties." Notwithstanding the title of this Agreement, the obligations set forth
-herein shall, except where expressly stated to be reciprocal, run solely in favor
-of Acme as the Disclosing Party.
+This Mutual Non-Disclosure Agreement (this "Agreement") is entered into as of the Effective Date by Acme Robotics, Inc., a Delaware corporation ("Acme"), and the counterparty on the signature page ("Counterparty"), for the purpose of exploring a potential business relationship in autonomous material-handling systems (the "Purpose"). Notwithstanding the title, except where expressly stated to be reciprocal the obligations herein run solely in favor of Acme.
 
-RECITALS
+1. DEFINITIONS. "Confidential Information" means all non-public information disclosed by a Party (the "Disclosing Party") to the other (the "Receiving Party"), in any form and whether or not marked, including trade secrets, designs, source code, pricing, business plans, and the terms of this Agreement. "Representatives" means a Party's affiliates and their directors, officers, employees, and advisors.
 
-WHEREAS, the Parties wish to explore a potential business relationship relating
-to the design, integration, and deployment of autonomous material-handling
-systems (the "Purpose"); and
-
-WHEREAS, in connection with the Purpose each Party may disclose to the other
-certain confidential and proprietary information;
-
-NOW, THEREFORE, in consideration of the mutual covenants and promises contained
-herein, and for other good and valuable consideration, the receipt and
-sufficiency of which are hereby acknowledged, the Parties agree as follows:
-
-1. DEFINITIONS.
-
-   1.1 "Confidential Information" means any and all non-public information
-   disclosed by or on behalf of a Party (the "Disclosing Party") to the other
-   Party (the "Receiving Party"), whether disclosed orally, visually, in
-   writing, electronically, or in any other form, and whether or not marked,
-   designated, or otherwise identified as "confidential," including without
-   limitation trade secrets, know-how, inventions, designs, schematics, source
-   code, object code, algorithms, firmware, product roadmaps, pricing,
-   forecasts, customer and supplier lists, business plans, and the existence and
-   terms of this Agreement and of any discussions between the Parties.
-
-   1.2 "Representatives" means, with respect to a Party, its affiliates and its
-   and their respective directors, officers, employees, agents, accountants,
-   attorneys, consultants, and financial advisors.
-
-   1.3 "Purpose" has the meaning set forth in the recitals above.
-
-2. CONFIDENTIAL INFORMATION; EXCLUSIONS.
-
-   2.1 All Confidential Information shall remain the sole and exclusive property
-   of the Disclosing Party. The Receiving Party acquires no rights of any kind
-   in or to the Confidential Information except the limited right to use it for
-   the Purpose.
-
-   2.2 Confidential Information does not include information that the Receiving
-   Party can demonstrate by competent written records: (a) was rightfully in its
-   possession without restriction prior to disclosure; (b) is or becomes
-   publicly available through no breach of this Agreement by the Receiving Party;
-   (c) is rightfully received from a third party without a duty of
-   confidentiality; or (d) is independently developed by the Receiving Party
-   without use of or reference to the Confidential Information.
+2. EXCLUSIONS. Confidential Information excludes information the Receiving Party can show by competent written records was (a) already known without restriction, (b) public through no breach, (c) received from a third party without a duty of confidentiality, or (d) independently developed without use of the Confidential Information.
 
 3. OBLIGATIONS OF THE RECEIVING PARTY.
+   3.1 The Receiving Party shall protect Confidential Information with at least a reasonable degree of care.
+   3.2 It shall disclose only to Representatives with a need to know who are bound by similar obligations, and is responsible for their breaches.
+   3.3 It shall use the Confidential Information solely for the Purpose.
+   3.4 For the avoidance of doubt, the foregoing obligations apply only to Counterparty as Receiving Party; Acme bears no reciprocal obligation of confidentiality.
 
-   3.1 The Receiving Party shall hold the Confidential Information in strict
-   confidence and shall use at least the same degree of care it uses to protect
-   its own confidential information of like importance, but in no event less than
-   a reasonable degree of care.
-
-   3.2 The Receiving Party shall not disclose Confidential Information to any
-   person other than its Representatives who have a need to know for the Purpose
-   and who are bound by obligations of confidentiality at least as protective as
-   those herein. The Receiving Party shall be responsible for any breach of this
-   Agreement by its Representatives.
-
-   3.3 The Receiving Party shall use the Confidential Information solely for the
-   Purpose and for no other purpose whatsoever.
-
-   3.4 For the avoidance of doubt, the foregoing obligations of confidentiality
-   and non-use shall apply only to the Counterparty as Receiving Party; Acme
-   shall bear no reciprocal obligation of confidentiality with respect to any
-   information disclosed to it by Counterparty.
-
-4. PERMITTED AND COMPELLED DISCLOSURE.
-
-   4.1 The Receiving Party may disclose Confidential Information to the extent
-   required by applicable law, regulation, or valid order of a court or
-   governmental authority of competent jurisdiction; provided that, to the
-   extent legally permitted, the Receiving Party shall give the Disclosing Party
-   prompt prior written notice of such requirement so that the Disclosing Party
-   may seek a protective order or other appropriate remedy.
-
-   4.2 If such protective order is not obtained, the Receiving Party shall
-   disclose only that portion of the Confidential Information that it is legally
-   compelled to disclose and shall use commercially reasonable efforts to obtain
-   assurance that confidential treatment will be accorded to such information.
+4. COMPELLED DISCLOSURE. The Receiving Party may disclose Confidential Information as required by law if, where legally permitted, it gives the Disclosing Party prompt prior notice so it may seek a protective order, and then discloses only the portion legally required.
 
 5. TERM AND SURVIVAL.
+   5.1 This Agreement runs from the Effective Date until terminated by either Party on thirty (30) days' written notice.
+   5.2 The Receiving Party's confidentiality and non-use obligations survive in perpetuity.
 
-   5.1 This Agreement shall commence on the Effective Date and continue in full
-   force and effect unless terminated by either Party upon thirty (30) days'
-   prior written notice.
+6. RETURN OR DESTRUCTION. On the Disclosing Party's request or on termination, the Receiving Party shall return or destroy all Confidential Information and certify the same, retaining one archival copy solely for compliance.
 
-   5.2 Notwithstanding any termination, the confidentiality and non-use
-   obligations of the Receiving Party with respect to all Confidential
-   Information shall survive in perpetuity and shall continue for so long as the
-   information remains confidential, regardless of whether this Agreement has
-   otherwise terminated or expired.
-
-6. RETURN OR DESTRUCTION OF MATERIALS.
-
-   6.1 Upon the Disclosing Party's written request or upon termination of this
-   Agreement, the Receiving Party shall promptly return or, at the Disclosing
-   Party's election, destroy all Confidential Information in its possession or
-   control, together with all copies, notes, and derivatives thereof, and shall
-   certify such return or destruction in writing.
-
-   6.2 The Receiving Party may retain one (1) archival copy solely for the
-   purpose of monitoring its compliance with this Agreement, which copy shall
-   remain subject to the confidentiality obligations herein.
-
-7. NO LICENSE; NO WARRANTY.
-
-   7.1 Nothing in this Agreement shall be construed as granting, by implication,
-   estoppel, or otherwise, any license or right under any patent, copyright,
-   trademark, trade secret, or other intellectual property right of the
-   Disclosing Party.
-
-   7.2 ALL CONFIDENTIAL INFORMATION IS PROVIDED "AS IS." THE DISCLOSING PARTY
-   MAKES NO REPRESENTATIONS OR WARRANTIES, EXPRESS OR IMPLIED, AS TO THE
-   ACCURACY, COMPLETENESS, OR PERFORMANCE OF ANY CONFIDENTIAL INFORMATION.
+7. NO LICENSE; NO WARRANTY. No license or right is granted by implication, estoppel, or otherwise, and all Confidential Information is provided "AS IS" without warranty of any kind.
 
 8. GOVERNING LAW; JURISDICTION.
+   8.1 This Agreement is governed by the laws of the State of New York, without regard to its conflict-of-laws principles.
+   8.2 Each Party submits to the exclusive jurisdiction of the state and federal courts located in New York County, New York.
 
-   8.1 This Agreement shall be governed by and construed in accordance with the
-   laws of the State of New York, without regard to its conflict-of-laws
-   principles.
+9. INJUNCTIVE RELIEF; REMEDIES. Acme is entitled to seek injunctive relief for any breach, without the posting of a bond, in addition to all other remedies available.
 
-   8.2 Each Party irrevocably submits to the exclusive jurisdiction of the state
-   and federal courts located in the County of New York, State of New York, for
-   any action arising out of or relating to this Agreement, and waives any
-   objection to venue laid therein.
-
-9. INJUNCTIVE RELIEF; REMEDIES.
-
-   9.1 The Receiving Party acknowledges that any breach of this Agreement may
-   cause irreparable harm to the Disclosing Party for which monetary damages
-   would be an inadequate remedy. Accordingly, the Disclosing Party shall be
-   entitled to seek injunctive relief, specific performance, and other equitable
-   remedies without the posting of any bond or other security, in addition to
-   any other remedies available at law or in equity.
-
-10. NON-SOLICITATION.
-
-   10.1 During the term of this Agreement and for a period of twenty-four (24)
-   months following its termination, the Receiving Party shall not, directly or
-   indirectly, solicit for employment, hire, or otherwise engage any employee,
-   contractor, or consultant of the Disclosing Party with whom the Receiving
-   Party had contact in connection with the Purpose.
-
-   10.2 The Receiving Party further agrees that, during such period, it shall not
-   solicit or attempt to divert any customer, supplier, or business partner of
-   the Disclosing Party that becomes known to the Receiving Party through the
-   Confidential Information.
+10. NON-SOLICITATION. For twenty-four (24) months, Counterparty shall not solicit or hire Acme personnel or divert Acme customers.
 
 11. ASSIGNMENT.
+    11.1 Acme may assign this Agreement freely and without consent; Counterparty may not assign without Acme's prior written consent.
 
-   11.1 The Disclosing Party may freely assign, transfer, or delegate this
-   Agreement, in whole or in part, together with all Confidential Information and
-   all rights and obligations hereunder, to any third party at any time, without
-   notice to or the consent of the Receiving Party.
-
-   11.2 The Receiving Party may not assign this Agreement without the prior
-   written consent of the Disclosing Party, and any purported assignment in
-   violation of this Section shall be null and void.
-
-12. MISCELLANEOUS.
-
-   12.1 Notices. All notices under this Agreement shall be in writing and shall
-   be deemed given when delivered personally, sent by confirmed electronic mail,
-   or three (3) business days after being sent by certified mail to the address
-   set forth on the signature page.
-
-   12.2 Entire Agreement. This Agreement constitutes the entire agreement between
-   the Parties with respect to its subject matter and supersedes all prior or
-   contemporaneous understandings, whether written or oral.
-
-   12.3 Severability. If any provision of this Agreement is held to be invalid or
-   unenforceable, the remaining provisions shall continue in full force and
-   effect.
-
-   12.4 Amendment; Waiver. No amendment to or waiver of any provision of this
-   Agreement shall be effective unless in writing and signed by both Parties. No
-   failure or delay in exercising any right shall operate as a waiver thereof.
-
-   12.5 Counterparts. This Agreement may be executed in one or more counterparts,
-   each of which shall be deemed an original and all of which together shall
-   constitute one and the same instrument.`;
+12. MISCELLANEOUS. Notices shall be in writing; this Agreement is the entire agreement and supersedes prior discussions; if any provision is unenforceable the remainder stays in effect; amendments must be in writing; and this Agreement may be executed in counterparts, each of which is an original and all of which together constitute one and the same instrument.`;
 
 const VENDOR_NDA = `NON-DISCLOSURE AGREEMENT
 
-This Non-Disclosure Agreement (this "Agreement") is entered into as of the
-Effective Date set forth on the signature page by and between Northwind Systems
-LLC, a Delaware limited liability company ("Northwind"), and the receiving
-vendor identified below ("Vendor"). Northwind is the disclosing party and Vendor
-is the receiving party hereunder.
+This Non-Disclosure Agreement (this "Agreement") is entered into as of the Effective Date by Northwind Systems, LLC ("Vendor") and the disclosing counterparty on the signature page ("Company"), for the purpose of evaluating a potential vendor engagement (the "Purpose"). The confidentiality obligations herein run one way, from Vendor to Company.
 
-1. DEFINITIONS.
+1. DEFINITIONS. "Confidential Information" means all non-public information disclosed by Company to Vendor in any form, whether or not marked, including specifications, data, pricing, and business plans. "Representatives" means Vendor's employees and advisors with a need to know.
 
-   1.1 "Confidential Information" means all non-public, proprietary, or
-   confidential information of Northwind, whether disclosed in writing, orally,
-   electronically, or by inspection of tangible objects, that is either (a)
-   marked or otherwise designated as "confidential" or "proprietary" at the time
-   of disclosure, or (b) information that, given its nature and the circumstances
-   of disclosure, a reasonable person would understand to be confidential,
-   including without limitation technical specifications, integration interfaces,
-   security architecture, pricing, and procurement data.
-
-   1.2 "Representatives" means Vendor's employees, subcontractors, and
-   professional advisors who have a need to know the Confidential Information in
-   order to perform under the parties' contemplated engagement (the "Purpose").
-
-2. CONFIDENTIAL INFORMATION; EXCLUSIONS.
-
-   2.1 Confidential Information shall not include information that: (a) is or
-   becomes generally known to the public other than as a result of a breach of
-   this Agreement by Vendor; (b) was known to Vendor, free of any obligation of
-   confidentiality, prior to its disclosure by Northwind; (c) is rightfully
-   obtained by Vendor from a third party without restriction; or (d) is
-   independently developed by Vendor without use of the Confidential Information.
+2. EXCLUSIONS. Confidential Information excludes information that was already known without restriction, is public through no breach, is received from a third party without a duty of confidentiality, or is independently developed without use of the Confidential Information.
 
 3. OBLIGATIONS OF THE RECEIVING PARTY.
+   3.1 Vendor shall protect Company's Confidential Information with at least a reasonable degree of care and use it solely for the Purpose.
+   3.2 Only Vendor is bound as Receiving Party; Company bears no reciprocal confidentiality obligation with respect to Vendor's information.
 
-   3.1 Vendor shall not, and shall ensure that its Representatives do not, use
-   the Confidential Information for any purpose other than the Purpose, or
-   disclose the Confidential Information to any third party, without the prior
-   written consent of Northwind.
-
-   3.2 The confidentiality and non-use obligations under this Agreement are
-   undertaken solely by Vendor in favor of Northwind. Northwind shall have no
-   obligation of confidentiality with respect to any information that Vendor may
-   disclose to Northwind, all of which Northwind shall be free to use and
-   disclose without restriction.
-
-   3.3 Vendor shall protect the Confidential Information using no less than a
-   reasonable standard of care and shall promptly notify Northwind of any actual
-   or suspected unauthorized use or disclosure.
-
-4. PERMITTED AND COMPELLED DISCLOSURE.
-
-   4.1 Vendor may disclose Confidential Information to the extent required by a
-   valid order of a court or other governmental body or by applicable law,
-   provided that Vendor shall, to the extent legally permitted, provide Northwind
-   with prompt written notice and reasonable assistance, at Northwind's expense,
-   in opposing such disclosure or seeking a protective order.
+4. COMPELLED DISCLOSURE. Vendor may disclose Confidential Information as required by law after giving Company prompt prior notice where legally permitted.
 
 5. TERM AND SURVIVAL.
+   5.1 This Agreement begins on the Effective Date and continues for two (2) years.
+   5.2 Vendor's confidentiality obligations survive for seven (7) years following disclosure.
 
-   5.1 This Agreement shall remain in effect for a period of two (2) years from
-   the Effective Date, unless earlier terminated by Northwind upon written
-   notice.
+6. RETURN OR DESTRUCTION. Vendor shall return or destroy all Confidential Information on Company's request and certify the same.
 
-   5.2 Vendor's obligations with respect to Confidential Information shall survive
-   any termination or expiration of this Agreement and shall continue for a
-   period of seven (7) years from the date of each disclosure.
-
-6. RETURN OR DESTRUCTION OF MATERIALS.
-
-   6.1 Upon termination of this Agreement or upon Northwind's written request,
-   Vendor shall, at Northwind's option, return or destroy all Confidential
-   Information and all copies, summaries, and extracts thereof, and shall, upon
-   request, certify in writing that it has done so.
-
-7. NO LICENSE; NO WARRANTY.
-
-   7.1 No license under any intellectual property right is granted or implied by
-   the disclosure of Confidential Information under this Agreement.
-
-   7.2 All Confidential Information is provided "AS IS," and Northwind disclaims
-   all warranties, express or implied, regarding the Confidential Information,
-   including any warranty of accuracy or fitness for a particular purpose.
+7. NO LICENSE; NO WARRANTY. No license is granted, and all Confidential Information is provided "AS IS" without warranty.
 
 8. GOVERNING LAW; JURISDICTION.
+   8.1 This Agreement is governed by the laws of the State of Delaware, without regard to its conflict-of-laws principles.
+   8.2 The Parties submit to the exclusive jurisdiction of the courts located in New Castle County, Delaware.
 
-   8.1 This Agreement shall be governed by and construed in accordance with the
-   laws of the State of Delaware, without regard to conflict-of-laws principles.
+9. INJUNCTIVE RELIEF; REMEDIES. Company is entitled to seek injunctive relief for any breach, in addition to all other remedies available.
 
-   8.2 The parties consent to the exclusive jurisdiction and venue of the state
-   and federal courts located in Wilmington, Delaware for any dispute arising
-   under this Agreement.
-
-9. INJUNCTIVE RELIEF; REMEDIES.
-
-   9.1 Vendor agrees that a breach of this Agreement may cause Northwind
-   irreparable injury for which monetary damages would not be an adequate remedy,
-   and that Northwind shall be entitled to seek equitable relief, including
-   injunction and specific performance, in addition to all other remedies
-   available at law or in equity.
-
-10. NON-SOLICITATION.
-
-   10.1 During the term of this Agreement and for twelve (12) months thereafter,
-   Vendor shall not directly or indirectly solicit for employment or engagement
-   any employee or contractor of Northwind with whom Vendor became acquainted in
-   connection with the Purpose, except pursuant to a general solicitation not
-   specifically directed at such persons.
+10. NON-SOLICITATION. For twelve (12) months, Vendor shall not solicit Company employees, except by general solicitations not specifically targeted at Company personnel.
 
 11. ASSIGNMENT.
+    11.1 Company may assign this Agreement without consent; Vendor may not assign without Company's prior written consent.
 
-   11.1 Northwind may assign or transfer this Agreement, in whole or in part, to
-   any affiliate or to any successor in interest, including in connection with a
-   merger, acquisition, reorganization, or sale of all or substantially all of
-   its assets, without notice to or the consent of Vendor.
-
-   11.2 Vendor may not assign or transfer this Agreement or any of its rights or
-   obligations hereunder without Northwind's prior written consent.
-
-12. MISCELLANEOUS.
-
-   12.1 Notices. All notices required or permitted under this Agreement shall be
-   in writing and delivered to the addresses set forth on the signature page,
-   and shall be effective upon receipt.
-
-   12.2 Entire Agreement. This Agreement sets forth the entire understanding of
-   the parties relating to its subject matter and supersedes all prior
-   agreements, representations, and understandings, whether written or oral.
-
-   12.3 Severability. Should any provision of this Agreement be held invalid or
-   unenforceable, such provision shall be modified to the minimum extent
-   necessary to make it enforceable, and the remaining provisions shall remain in
-   full force and effect.
-
-   12.4 Amendment; Waiver. This Agreement may be amended only by a written
-   instrument signed by both parties. No waiver of any term shall be deemed a
-   continuing waiver or a waiver of any other term.
-
-   12.5 Counterparts; Electronic Signature. This Agreement may be executed in
-   counterparts and by electronic signature, each of which shall be deemed an
-   original and all of which together shall constitute one instrument.`;
+12. MISCELLANEOUS. Notices shall be in writing; this Agreement is the entire agreement; if any provision is unenforceable the remainder stays in effect; amendments must be in writing; and it may be executed in counterparts, each of which is an original and all of which together constitute one instrument.`;
 
 const OFFER_LETTER = `EMPLOYMENT OFFER LETTER
 
 Dear Candidate,
 
-We are pleased to offer you the position of Senior Engineer at Helio Labs, Inc.
-("Helio" or the "Company"). This letter sets forth the principal terms of your
-proposed employment. Your employment is contingent upon completion of a
-background check and your execution of the Company's standard Proprietary
-Information and Inventions Assignment Agreement.
+Helio Labs, Inc. (the "Company") is pleased to offer you the position of Senior Engineer, reporting to the VP of Engineering, on the following terms.
 
-1. POSITION AND DUTIES. You will serve as a Senior Engineer reporting to the VP
-   of Engineering. You agree to devote your full business time and attention to
-   the affairs of the Company.
+1. POSITION AND DUTIES. Full-time, exempt. You agree to devote your full business time and attention to the Company.
 
-2. COMPENSATION.
-   - Base Salary: $185,000 per year, payable in accordance with the Company's
-     standard payroll practices and subject to applicable withholdings.
-   - Annual Target Bonus: up to 15% of base salary, subject to Company and
-     individual performance and the discretion of the Board.
+2. COMPENSATION. Annual base salary of USD 185,000, paid semi-monthly, plus eligibility for the Company's annual bonus and equity programs.
 
-3. EQUITY. Subject to Board approval, you will be granted an option to purchase
-   12,000 shares of the Company's common stock (incentive stock options to the
-   maximum extent permitted), vesting over four (4) years with a one-year cliff
-   and monthly vesting thereafter, subject to your continued service.
+3. AT-WILL EMPLOYMENT. Your employment is at will and may be terminated by either party at any time, with or without cause or notice.
 
-4. AT-WILL EMPLOYMENT. Your employment with the Company is "at-will," meaning
-   that either you or the Company may terminate the employment relationship at
-   any time, with or without cause and with or without notice.
+4. CONFIDENTIALITY AND IP ASSIGNMENT. As a condition of employment you will sign the Company's standard Confidential Information and Invention Assignment Agreement.
 
-5. NON-COMPETE. For a period of twelve (12) months following the termination of
-   your employment for any reason, you agree that you will not, directly or
-   indirectly, own, manage, operate, consult for, or be employed by any business
-   anywhere in the United States that competes with the Company.
+5. NON-COMPETITION. You agree not to engage in any competing business for twelve (12) months following termination, anywhere the Company operates.
 
-6. NON-SOLICITATION. For twelve (12) months following termination, you agree not
-   to solicit any employee of the Company to leave their employment or any
-   customer of the Company to curtail its business with the Company.
+6. NON-SOLICITATION. For twelve (12) months following termination you shall not solicit the Company's employees or customers.
 
-7. ARBITRATION. To the fullest extent permitted by law, any dispute arising out
-   of or relating to your employment shall be resolved exclusively by final and
-   binding arbitration. You and the Company each waive the right to a trial by
-   jury and the right to bring or participate in any class, collective, or
-   representative action.
+7. GOVERNING LAW. This letter is governed by the laws of the State of California.
 
-8. ENTIRE AGREEMENT. This letter, together with the agreements referenced
-   herein, constitutes the entire agreement regarding the terms of your
-   employment and supersedes all prior discussions.`;
+8. ENTIRE AGREEMENT. This letter sets forth the terms of your employment and supersedes all prior discussions.`;
 
 /**
  * Corporate Counsel persona. Primary workflow cluster: NDA review with a fixed

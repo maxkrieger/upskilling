@@ -161,6 +161,7 @@ app.post("/api/chat", async (c) => {
       await streamChat({
         system,
         messages,
+        maxTokens: 8192, // headroom for long outputs (clause tables) — we stream
         container: container ?? undefined,
         tools: container ? [CODE_EXECUTION_TOOL] : undefined,
         betas: betas.length ? betas : undefined,
