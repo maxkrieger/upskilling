@@ -92,6 +92,7 @@ export const analystProfile: Profile = {
       id: "p_an_3",
       title: "Explain a stats concept",
       subtitle: "One-off question",
+      oneOff: true,
       prompt: "What's the difference between standard deviation and standard error?",
     },
   ],

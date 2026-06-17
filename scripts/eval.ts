@@ -265,7 +265,8 @@ async function evalLifecycle() {
       console.log(`\n${pid}:`);
       let createdSkill: Skill | null = null;
 
-      // Phase 1 — presets: workflow ones cue + create (register the first).
+      // Phase 1 — presets: workflow prompts (oneOff !== true) must create-cue and
+      // create the skill (register the first); one-off prompts must NOT cue.
       for (const preset of profile.presets ?? []) {
         const decision = await decideCue({
           userMessage: preset.prompt,
@@ -273,38 +274,44 @@ async function evalLifecycle() {
           skills: [],
         });
         const isCreate = !!decision.shouldCue && decision.kind === "create" && !!decision.workflowSetId;
-        if (isCreate) {
-          const r = await simulateButtonPress(
-            profile,
-            preset,
-            decision.preferences,
-            creatorContainer,
-            createTools,
-            creatorRef.slug,
-            !createdSkill,
-          );
-          if (r.skill) {
-            createdSkill = r.skill;
-            registeredIds.push(r.skill.skillId!);
-          }
-          const ok = r.created && r.creatorFiredFirst;
-          console.log(
-            `  create  ${preset.title} → ${r.creatorFiredFirst ? "creator fired" : "creator NOT fired"}` +
-              ` / ${r.created ? "create_skill ✓" : "create_skill ✗"}`,
-          );
-          rows.push({ profile: pid, phase: "create", preset: preset.title, ok });
-        } else {
-          console.log(`  cue     ${preset.title} → ${decision.shouldCue ? decision.kind : "no cue"} (no create button)`);
-          rows.push({ profile: pid, phase: "cue", preset: preset.title, ok: null, note: decision.shouldCue ? decision.kind : "no-cue" });
+        if (preset.oneOff) {
+          const ok = !isCreate; // a one-off question must not cue a skill
+          console.log(`  ${ok ? "✓" : "✗"} cue    ${preset.title} → ${isCreate ? "create cue" : "no cue"} (expected no cue)`);
+          rows.push({ profile: pid, phase: "cue", preset: preset.title, ok, note: "expect-no-cue" });
+          continue;
         }
+        if (!isCreate) {
+          console.log(`  ✗ create ${preset.title} → no create cue (expected create)`);
+          rows.push({ profile: pid, phase: "create", preset: preset.title, ok: false, note: "expected-create-cue" });
+          continue;
+        }
+        const r = await simulateButtonPress(
+          profile,
+          preset,
+          decision.preferences,
+          creatorContainer,
+          createTools,
+          creatorRef.slug,
+          !createdSkill,
+        );
+        if (r.skill) {
+          createdSkill = r.skill;
+          registeredIds.push(r.skill.skillId!);
+        }
+        const ok = r.created && r.creatorFiredFirst;
+        console.log(
+          `  ${ok ? "✓" : "✗"} create ${preset.title} → ${r.creatorFiredFirst ? "creator fired" : "creator NOT fired"}` +
+            ` / ${r.created ? "create_skill ✓" : "create_skill ✗"}`,
+        );
+        rows.push({ profile: pid, phase: "create", preset: preset.title, ok });
       }
 
       // Phase 2 — loose presets: workflow ones must fire the created skill;
-      // spurious "one-off" asks must NOT (the skill shouldn't over-trigger).
+      // one-off asks must NOT (the skill shouldn't over-trigger).
       if (createdSkill) {
         const liveContainer = skillContainer([createdSkill], creatorRef);
         for (const loose of profile.loosePresets ?? []) {
-          const expectFire = !/one-?off/i.test(loose.subtitle ?? "");
+          const expectFire = !loose.oneOff;
           const fired = await askFires(profile, loose, liveContainer, createdSkill.slug!);
           const ok = fired === expectFire;
           console.log(
@@ -322,15 +329,15 @@ async function evalLifecycle() {
     await deleteSkillRemote(creatorRef.skill_id);
   }
 
-  const created = rows.filter((r) => r.phase === "create");
+  const presetRows = rows.filter((r) => r.phase === "create" || r.phase === "cue");
   const fires = rows.filter((r) => r.phase === "fire");
-  const createOk = created.filter((r) => r.ok).length;
+  const presetOk = presetRows.filter((r) => r.ok).length;
   const fireOk = fires.filter((r) => r.ok).length;
   console.log(
-    `\n  create (button→skill): ${createOk}/${created.length}` +
-      ` | loose asks fire the created skill: ${fireOk}/${fires.length}`,
+    `\n  presets (cue + create): ${presetOk}/${presetRows.length}` +
+      ` | loose asks (fire vs. no-fire): ${fireOk}/${fires.length}`,
   );
-  return { rows, createOk, createTotal: created.length, fireOk, fireTotal: fires.length };
+  return { rows, presetOk, presetTotal: presetRows.length, fireOk, fireTotal: fires.length };
 }
 
 async function main() {

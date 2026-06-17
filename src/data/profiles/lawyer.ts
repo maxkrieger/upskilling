@@ -144,6 +144,7 @@ export const lawyerProfile: Profile = {
       id: "p_law_3",
       title: "Statute of limitations question",
       subtitle: "One-off question",
+      oneOff: true,
       prompt:
         "What's the statute of limitations for a breach of written contract claim in California?",
     },
@@ -170,6 +171,7 @@ export const lawyerProfile: Profile = {
       id: "p_law_l3",
       title: "Statute of limitations question",
       subtitle: "One-off question",
+      oneOff: true,
       prompt:
         "What's the statute of limitations for a breach of written contract claim in California?",
     },

@@ -84,6 +84,10 @@ export interface PresetPrompt {
   subtitle?: string;
   prompt: string;
   attachmentRefs?: string[]; // names resolved against profile.attachments
+  /** A non-workflow, one-off Q&A — it should NOT cue or fire a skill. Marks the
+   * spurious examples for evals (and the demo). Defaults to false (a repeatable
+   * workflow that should cue/fire). */
+  oneOff?: boolean;
 }
 
 // ---- Workflow extraction / index ----
