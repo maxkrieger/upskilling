@@ -16,8 +16,6 @@ import {
   extractWorkflow,
   registerSkillRemote,
   streamChat,
-  streamCreateSkill,
-  streamUpdateSkill,
 } from "./api.ts";
 
 const uid = (p: string) => `${p}_${Math.random().toString(36).slice(2, 10)}`;
@@ -212,6 +210,37 @@ export const useStore = create<State>()(
                 if (am) am.appliedSkillIds = meta.appliedSkillIds;
               });
             },
+            // The model created/updated a skill via tool call — persist it and
+            // resolve the most recent pending cue banner in this conversation.
+            onSkill: ({ skill, kind, replacesLocalId }) => {
+              set((s) => {
+                const cur = s.skillsByProfile[pid] ?? BUILTIN_SKILLS;
+                const next =
+                  kind === "update" && replacesLocalId
+                    ? cur.map((sk) => (sk.id === replacesLocalId ? { ...skill, id: replacesLocalId } : sk))
+                    : [...cur, skill];
+                return { skillsByProfile: { ...s.skillsByProfile, [pid]: next } };
+              });
+              let setId: string | undefined;
+              let setKind: string | undefined;
+              writeConvos((c) => {
+                for (let i = c.messages.length - 1; i >= 0; i--) {
+                  const b = c.messages[i].banner;
+                  if (b?.status === "pending") {
+                    setId = b.workflowSetId;
+                    setKind = b.kind;
+                    c.messages[i] = { ...c.messages[i], banner: { ...b, status: "accepted" } };
+                    break;
+                  }
+                }
+              });
+              if (setKind === "create" && setId) {
+                updateIndexSet(get, set, pid, setId, (ws) => {
+                  ws.cueStatus = "accepted";
+                  ws.skillId = skill.id;
+                });
+              }
+            },
             onDelta: (delta) => {
               writeConvos((c) => {
                 const am = c.messages.find((m) => m.id === assistantMsg.id);
@@ -240,161 +269,31 @@ export const useStore = create<State>()(
         void refreshIndexForConversation(get, set, pid, convo.id);
       },
 
-      // ---- Accept a cue: invoke the skill-creator as an interactive,
-      // streamed chat turn, then register the resulting skill. ----
+      // ---- Accept a cue (button): send the user's assent so the model drives
+      // the skill-creator and persists via the create_skill tool. The streamed
+      // onSkill handler in sendMessage records the skill and flips the banner. ----
       acceptCue: async (conversationId, messageId) => {
-        const pid = get().activeProfileId;
-        const convo = get().conversations(pid).find((c) => c.id === conversationId);
-        const msg = convo?.messages.find((m) => m.id === messageId);
-        const banner = msg?.banner;
-        if (!banner || get().sending) return;
-
-        const wfSet = get().index(pid).find((s) => s.id === banner.workflowSetId);
-        if (!wfSet) return;
-
-        const memberConvos = get()
-          .conversations(pid)
-          .filter((c) => wfSet.members.some((m) => m.conversationId === c.id));
-
-        // Append an interactive turn: the user's "create a skill" request and a
-        // streaming assistant reply from the skill-creator.
-        const assistantId = uid("m");
-        const turn: Message[] = [
-          {
-            id: uid("m"),
-            role: "user",
-            content: `Create a Skill for my ${wfSet.cluster.replace(/-/g, " ")} workflow.`,
-            createdAt: now(),
-          },
-          { id: assistantId, role: "assistant", content: "", createdAt: now() },
-        ];
-
-        const writeAssistant = (mutate: (m: Message) => void) => {
-          set((s) => {
-            const list = [...(s.userConversations[pid] ?? [])];
-            const ci = list.findIndex((c) => c.id === conversationId);
-            if (ci === -1) return s;
-            const c2 = { ...list[ci], messages: [...list[ci].messages] };
-            const mi = c2.messages.findIndex((m) => m.id === assistantId);
-            if (mi === -1) return s;
-            c2.messages[mi] = { ...c2.messages[mi] };
-            mutate(c2.messages[mi]);
-            c2.updatedAt = now();
-            list[ci] = c2;
-            return { userConversations: { ...s.userConversations, [pid]: list } };
-          });
-        };
-
-        set((s) => {
-          const list = [...(s.userConversations[pid] ?? [])];
-          const ci = list.findIndex((c) => c.id === conversationId);
-          if (ci === -1) return s;
-          const c2 = { ...list[ci], messages: [...list[ci].messages, ...turn], updatedAt: now() };
-          list[ci] = c2;
-          return { sending: true, userConversations: { ...s.userConversations, [pid]: list } };
-        });
-
-        await streamCreateSkill(
-          { workflowSet: wfSet, conversations: memberConvos },
-          {
-            onDelta: (delta) => writeAssistant((m) => (m.content += delta)),
-            onSkill: (skill) => {
-              set((s) => ({
-                skillsByProfile: {
-                  ...s.skillsByProfile,
-                  [pid]: [...(s.skillsByProfile[pid] ?? BUILTIN_SKILLS), skill],
-                },
-              }));
-              updateIndexSet(get, set, pid, wfSet.id, (ws) => {
-                ws.cueStatus = "accepted";
-                ws.skillId = skill.id;
-              });
-              // Flip the original cue banner to its "created" state.
-              updateMessageBanner(set, pid, conversationId, messageId, { status: "accepted" });
-            },
-            onError: (errMsg) =>
-              writeAssistant((m) => (m.content += `\n\n_⚠️ ${errMsg}_`)),
-          },
-        );
-
-        set({ sending: false });
+        if (get().sending) return;
+        if (get().activeConversationId !== conversationId) set({ activeConversationId: conversationId });
+        await get().sendMessage("Yes — go ahead and capture that workflow as a Skill.");
       },
 
-      // ---- Accept an update cue: re-run the skill-creator over the existing
-      // skill + the new criterion, registering a new version in place. ----
+      // ---- Accept an update cue (button): same flow, naming the target skill so
+      // the model calls update_skill on it. ----
       acceptUpdate: async (conversationId, messageId) => {
+        if (get().sending) return;
         const pid = get().activeProfileId;
-        const convo = get().conversations(pid).find((c) => c.id === conversationId);
-        const banner = convo?.messages.find((m) => m.id === messageId)?.banner;
-        if (!banner || banner.kind !== "update" || get().sending) return;
+        const banner = get()
+          .conversations(pid)
+          .find((c) => c.id === conversationId)
+          ?.messages.find((m) => m.id === messageId)?.banner;
         const target = get()
           .skillsOf(pid)
-          .find((s) => s.id === banner.targetSkillId);
-        if (!target) return;
-
-        const assistantId = uid("m");
-        const turn: Message[] = [
-          {
-            id: uid("m"),
-            role: "user",
-            content: `Update my "${target.name}" skill: ${banner.summary ?? "add this preference"}.`,
-            createdAt: now(),
-          },
-          { id: assistantId, role: "assistant", content: "", createdAt: now() },
-        ];
-
-        const writeAssistant = (mutate: (m: Message) => void) => {
-          set((s) => {
-            const list = [...(s.userConversations[pid] ?? [])];
-            const ci = list.findIndex((c) => c.id === conversationId);
-            if (ci === -1) return s;
-            const c2 = { ...list[ci], messages: [...list[ci].messages] };
-            const mi = c2.messages.findIndex((m) => m.id === assistantId);
-            if (mi === -1) return s;
-            c2.messages[mi] = { ...c2.messages[mi] };
-            mutate(c2.messages[mi]);
-            c2.updatedAt = now();
-            list[ci] = c2;
-            return { userConversations: { ...s.userConversations, [pid]: list } };
-          });
-        };
-
-        // Recent conversation context for grounding the new preference.
-        const recent = (convo?.messages ?? [])
-          .filter((m) => m.content.trim())
-          .slice(-6)
-          .map((m) => ({ role: m.role, content: m.content, attachments: m.attachments } as Message));
-
-        set((s) => {
-          const list = [...(s.userConversations[pid] ?? [])];
-          const ci = list.findIndex((c) => c.id === conversationId);
-          if (ci === -1) return s;
-          const c2 = { ...list[ci], messages: [...list[ci].messages, ...turn], updatedAt: now() };
-          list[ci] = c2;
-          return { sending: true, userConversations: { ...s.userConversations, [pid]: list } };
-        });
-
-        await streamUpdateSkill(
-          { skill: target, newCriterion: banner.summary ?? "", conversation: { messages: recent } },
-          {
-            onDelta: (delta) => writeAssistant((m) => (m.content += delta)),
-            onSkill: (skill) => {
-              // Replace the skill in place (same local id).
-              set((s) => ({
-                skillsByProfile: {
-                  ...s.skillsByProfile,
-                  [pid]: (s.skillsByProfile[pid] ?? BUILTIN_SKILLS).map((sk) =>
-                    sk.id === target.id ? { ...skill, id: target.id } : sk,
-                  ),
-                },
-              }));
-              updateMessageBanner(set, pid, conversationId, messageId, { status: "accepted" });
-            },
-            onError: (errMsg) => writeAssistant((m) => (m.content += `\n\n_⚠️ ${errMsg}_`)),
-          },
+          .find((s) => s.id === banner?.targetSkillId);
+        if (get().activeConversationId !== conversationId) set({ activeConversationId: conversationId });
+        await get().sendMessage(
+          `Yes — please fold that into my "${target?.name ?? "skill"}" skill.`,
         );
-
-        set({ sending: false });
       },
 
       dismissCue: (conversationId, messageId) => {

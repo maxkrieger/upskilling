@@ -23,6 +23,8 @@ export async function checkPassword(password: string): Promise<boolean> {
 export interface ChatStreamHandlers {
   onMeta?: (meta: ChatMeta) => void;
   onDelta?: (text: string) => void;
+  /** A skill the model just created/updated via tool call (persist it locally). */
+  onSkill?: (payload: { skill: Skill; kind: "create" | "update"; replacesLocalId?: string }) => void;
   onError?: (message: string) => void;
   onDone?: () => void;
 }
@@ -76,6 +78,8 @@ function parseEvent(raw: string, handlers: ChatStreamHandlers) {
     const parsed = JSON.parse(data);
     if (event === "meta") handlers.onMeta?.(parsed as ChatMeta);
     else if (event === "delta") handlers.onDelta?.((parsed as { text: string }).text);
+    else if (event === "skill")
+      handlers.onSkill?.(parsed as { skill: Skill; kind: "create" | "update"; replacesLocalId?: string });
     else if (event === "error") handlers.onError?.((parsed as { message: string }).message);
   } catch {
     /* ignore malformed event */

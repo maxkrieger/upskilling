@@ -8,11 +8,14 @@ import { decideCue } from "./cue.ts";
 import { reportError } from "./discord.ts";
 import {
   CODE_EXECUTION_TOOL,
+  CREATE_SKILL_TOOL,
   deleteSkillRemote,
+  getSkillCreatorRef,
   registerSkill,
   registerSkillVersion,
   skillContainer,
   SKILLS_BETAS,
+  UPDATE_SKILL_TOOL,
 } from "./skills.ts";
 import {
   buildChatSystem,
@@ -138,12 +141,20 @@ app.post("/api/chat", async (c) => {
   // Build the message history. Deliver any cue as a mid-conversation system
   // turn after the latest user message (beta), not appended to the user's text.
   const messages: any[] = toAnthropicMessages(body.messages ?? []);
-  const betas: string[] = [];
+  const betas: string[] = [...SKILLS_BETAS];
 
-  // Attach the user's enabled, registered skills via container.skills. With no
-  // skills it's a plain streamed completion (no container/tool provisioning).
-  const container = skillContainer(body.skills ?? []);
-  if (container) betas.push(...SKILLS_BETAS);
+  // Always mount the skill-creator (authoring methodology) plus the user's
+  // enabled, registered skills (so they trigger natively). The model persists
+  // new/updated skills by calling create_skill / update_skill.
+  let creatorRef: { skill_id: string; version: string } | undefined;
+  try {
+    creatorRef = await getSkillCreatorRef();
+  } catch (err) {
+    console.error("[chat] skill-creator registration failed:", err);
+    void reportError(err, { source: "POST /api/chat (skill-creator register)" });
+  }
+  const container = skillContainer(body.skills ?? [], creatorRef);
+  const tools: any[] = [CODE_EXECUTION_TOOL, CREATE_SKILL_TOOL, UPDATE_SKILL_TOOL];
 
   if (cueInstruction) {
     messages.push({ role: "system", content: cueInstruction });
@@ -161,13 +172,60 @@ app.post("/api/chat", async (c) => {
       await streamChat({
         system,
         messages,
-        maxTokens: 8192, // headroom for long outputs (clause tables) — we stream
-        container: container ?? undefined,
-        tools: container ? [CODE_EXECUTION_TOOL] : undefined,
-        betas: betas.length ? betas : undefined,
+        maxTokens: 8192, // headroom for long outputs — we stream
+        container,
+        tools,
+        betas,
         handlers: {
           onText: (delta) => {
             void stream.writeSSE({ event: "delta", data: JSON.stringify({ text: delta }) });
+          },
+          // The model persists skills by calling these tools; we register with
+          // the Skills API and push the saved skill to the client (localStorage).
+          onToolUse: async (name, input) => {
+            try {
+              if (name === "create_skill") {
+                const reg = await registerSkill(input);
+                const skill: Skill = {
+                  id: id("skill"),
+                  name: input.name,
+                  description: input.description,
+                  instructions: input.instructions,
+                  source: "user",
+                  enabled: true,
+                  createdAt: new Date().toISOString(),
+                  skillId: reg.skillId,
+                  skillVersion: reg.skillVersion,
+                };
+                await stream.writeSSE({ event: "skill", data: JSON.stringify({ skill, kind: "create" }) });
+                return `Saved. The "${input.name}" skill is now active and will apply automatically next time.`;
+              }
+              if (name === "update_skill") {
+                const target = (body.skills ?? []).find(
+                  (s) => s.skillId && s.name.toLowerCase() === String(input.name).toLowerCase(),
+                );
+                if (!target?.skillId) {
+                  return `No existing skill named "${input.name}" was found — call create_skill to make a new one instead.`;
+                }
+                const reg = await registerSkillVersion(target.skillId, input);
+                const skill: Skill = {
+                  ...target,
+                  description: input.description,
+                  instructions: input.instructions,
+                  skillVersion: reg.skillVersion,
+                };
+                await stream.writeSSE({
+                  event: "skill",
+                  data: JSON.stringify({ skill, kind: "update", replacesLocalId: target.id }),
+                });
+                return `Updated the "${input.name}" skill.`;
+              }
+              return `Unknown tool: ${name}`;
+            } catch (e) {
+              console.error(`[chat] ${name} failed:`, e);
+              void reportError(e, { source: `POST /api/chat (${name})` });
+              return `Failed to save the skill: ${(e as Error).message}`;
+            }
           },
         },
       });

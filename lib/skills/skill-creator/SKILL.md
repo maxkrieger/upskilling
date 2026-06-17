@@ -7,6 +7,19 @@ description: Create new skills, modify and improve existing skills, and measure 
 
 A skill for creating new skills and iteratively improving them.
 
+## Saving skills in this environment (read first)
+
+You're running inside a chat product, not a coding workspace — there is **no durable filesystem, no subagents, and no eval/packaging scripts**. Anywhere the guidance below says to *write a `SKILL.md` to disk*, *run scripts* (`package_skill.py`, `generate_review.py`, `aggregate_benchmark`, `run_loop`), *spawn subagents*, or *hand over a `.skill` file*, that does **not** apply here — skip it.
+
+The only way to persist a skill is to **call a tool**:
+
+- Create a new skill → call **`create_skill`** with `{ name, description, instructions }`.
+- Update an existing skill → call **`update_skill`** with `{ name, description, instructions }` (same `name` as the skill being changed).
+
+Author the SKILL.md content in your reply using the writing guidance below, then call the tool to save it. Writing files to the workspace does not save anything, and never ask the user to copy/paste. Keep it lightweight: infer what you can from the conversation, ask a brief clarifying question only if genuinely needed, then call the tool. Don't run the test/eval loop unless the user explicitly asks for it.
+
+---
+
 At a high level, the process of creating a skill goes like this:
 
 - Decide what you want the skill to do and roughly how it should do it

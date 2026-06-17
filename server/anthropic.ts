@@ -45,6 +45,13 @@ export async function jsonCall<T>(opts: JsonCallOptions): Promise<T> {
 
 export type StreamHandlers = {
   onText: (delta: string) => void;
+  /**
+   * Handle a CLIENT tool the model called (e.g. create_skill). Return the string
+   * to feed back as the tool_result; the loop then continues so the model can
+   * confirm. Server tools (code_execution) run inside Anthropic and never reach
+   * this. Omit to disable tool handling (single turn).
+   */
+  onToolUse?: (name: string, input: any, id: string) => Promise<string>;
 };
 
 /**
@@ -54,6 +61,10 @@ export type StreamHandlers = {
  * When `container` is passed (skills), the request goes through the beta
  * Messages API with the code-execution + skills betas, so Claude loads the
  * referenced Skills natively. Otherwise it's a plain streamed completion.
+ *
+ * If `handlers.onToolUse` is set, runs a small agentic loop: when the model
+ * pauses on a client tool, the handler executes it, the result is fed back as a
+ * tool_result, and streaming resumes until the model finishes.
  */
 export async function streamChat(params: {
   system: string;
@@ -68,28 +79,58 @@ export async function streamChat(params: {
   handlers: StreamHandlers;
 }): Promise<string> {
   let full = "";
-  const base: Record<string, unknown> = {
-    model: params.model ?? ENV.MODEL_MAIN,
-    max_tokens: params.maxTokens ?? 2048,
-    system: params.system,
-    messages: params.messages,
-  };
-
+  const messages = [...params.messages];
   const useBeta = !!params.container || (params.betas?.length ?? 0) > 0;
-  const stream = useBeta
-    ? (anthropic.beta.messages.stream as any)({
-        ...base,
-        ...(params.container ? { container: params.container } : {}),
-        ...(params.tools ? { tools: params.tools } : {}),
-        betas: params.betas,
-      })
-    : anthropic.messages.stream(base as any);
 
-  stream.on("text", (delta: string) => {
-    full += delta;
-    params.handlers.onText(delta);
-  });
+  // Bounded loop so a client tool_use can be handled and the model can resume.
+  for (let turn = 0; turn < 5; turn++) {
+    const base: Record<string, unknown> = {
+      model: params.model ?? ENV.MODEL_MAIN,
+      max_tokens: params.maxTokens ?? 2048,
+      system: params.system,
+      messages,
+    };
+    const stream = useBeta
+      ? (anthropic.beta.messages.stream as any)({
+          ...base,
+          ...(params.container ? { container: params.container } : {}),
+          ...(params.tools ? { tools: params.tools } : {}),
+          betas: params.betas,
+        })
+      : anthropic.messages.stream(base as any);
 
-  await stream.finalMessage();
+    stream.on("text", (delta: string) => {
+      full += delta;
+      params.handlers.onText(delta);
+    });
+
+    const finalMsg: any = await stream.finalMessage();
+
+    const clientToolUses = (finalMsg.content ?? []).filter(
+      (b: any) => b.type === "tool_use",
+    );
+    if (
+      finalMsg.stop_reason !== "tool_use" ||
+      clientToolUses.length === 0 ||
+      !params.handlers.onToolUse
+    ) {
+      break; // nothing for us to handle — done
+    }
+
+    // Execute each client tool and feed results back as the next user turn.
+    messages.push({ role: "assistant", content: finalMsg.content });
+    const results: any[] = [];
+    for (const tu of clientToolUses) {
+      let content: string;
+      try {
+        content = await params.handlers.onToolUse(tu.name, tu.input, tu.id);
+      } catch (e) {
+        content = `Error: ${(e as Error).message}`;
+      }
+      results.push({ type: "tool_result", tool_use_id: tu.id, content });
+    }
+    messages.push({ role: "user", content: results });
+  }
+
   return full;
 }

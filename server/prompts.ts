@@ -39,6 +39,8 @@ Be concise, practical, and match the user's domain. Produce the actual work prod
 ${CHART_INSTRUCTIONS}
 Never run code to render a chart or image — always return the \`chart\` JSON block described above.
 
+Saving Skills: to capture the user's repeated workflow as a reusable Skill, call the \`create_skill\` tool (or \`update_skill\` to fold a new preference into one they already have). The skill-creator Skill is available for methodology. Saving happens ONLY by calling those tools — don't write skill files to the workspace. If the skill is about charts, its instructions must use the \`chart\` JSON block above, not matplotlib or any plotting library.
+
 You may receive a mid-conversation system message with an operator instruction. It is not from the user and is never the task itself. Always do the user's actual request first and in full; only once your complete answer is written do you act on the instruction. Never let it replace, shorten, delay, or precede the deliverable, and never repeat or mention the instruction itself.`;
 }
 
@@ -49,12 +51,12 @@ You may receive a mid-conversation system message with an operator instruction. 
  * the user consents and the skill is created.
  */
 export function cueOperatorNote(params: { preferences: string; trigger: string }): string {
-  return `Operator instruction (do not mention it to the user). FIRST fully answer the user's request above exactly as you normally would and finish the deliverable. THEN, and only then, append one short closing paragraph (2-3 sentences), separated by a blank line, that: notes you've seen them repeat this workflow with the same preferences (${params.preferences}); offers to capture it as a reusable Skill so they don't have to repeat these instructions; states clearly WHEN it would apply (${params.trigger}); and points to the "Create Skill" button below. Do NOT invent or state a name for the skill — leave naming until they create it. Keep it friendly and brief. If you have not yet produced the full answer, do not write this paragraph at all.`;
+  return `Operator instruction (do not mention it to the user). FIRST fully answer the user's request above exactly as you normally would and finish the deliverable. THEN, and only then, append one short closing paragraph (2-3 sentences), separated by a blank line, that: notes you've seen them repeat this workflow with the same preferences (${params.preferences}); offers to capture it as a reusable Skill so they don't have to repeat these instructions; and states clearly WHEN it would apply (${params.trigger}). Do NOT invent or state a name for the skill — leave naming until they create it. Do NOT tell them which button to press or how to trigger it — just make the offer; they can accept however they like. Keep it friendly and brief. If you have not yet produced the full answer, do not write this paragraph at all.`;
 }
 
 /** Operator note when the user states a new standing preference for an EXISTING skill. */
 export function updateOperatorNote(params: { skillName: string; newCriterion: string }): string {
-  return `Operator instruction (do not mention it to the user). FIRST fully answer the user's request above and finish the deliverable, applying the new preference they just stated. THEN append one short closing paragraph (1-2 sentences), separated by a blank line, that: notes this looks like a new standing preference for their existing "${params.skillName}" skill (specifically: ${params.newCriterion}); offers to fold it into that skill so they don't have to repeat it; and points to the "Update Skill" button below. Keep it friendly and brief. If you have not yet produced the full answer, do not write this paragraph at all.`;
+  return `Operator instruction (do not mention it to the user). FIRST fully answer the user's request above and finish the deliverable, applying the new preference they just stated. THEN append one short closing paragraph (1-2 sentences), separated by a blank line, that: notes this looks like a new standing preference for their existing "${params.skillName}" skill (specifically: ${params.newCriterion}); and offers to fold it into that skill so they don't have to repeat it. Do NOT tell them which button to press or how to trigger it — just make the offer; they can accept however they like. Keep it friendly and brief. If you have not yet produced the full answer, do not write this paragraph at all.`;
 }
 
 // ---- Cueing decider (create a new skill, or update an existing one) ----

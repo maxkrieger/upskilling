@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { toFile } from "@anthropic-ai/sdk";
 import { anthropic } from "./anthropic.ts";
 import type { Skill } from "../shared/types.ts";
@@ -7,6 +8,73 @@ const beta = anthropic.beta as any;
 /** Betas + tool required to attach Skills to a Messages API request. */
 export const SKILLS_BETAS = ["code-execution-2025-08-25", "skills-2025-10-02"];
 export const CODE_EXECUTION_TOOL = { type: "code_execution_20250825", name: "code_execution" };
+
+/** Client tools the chat model calls to persist skills (the ONLY way to save). */
+export const CREATE_SKILL_TOOL = {
+  name: "create_skill",
+  description:
+    "Save a new Skill so the user's preferences apply automatically next time. Call this once the SKILL.md content is ready. This is the only way a skill is persisted — do not write files to the workspace and do not ask the user to copy/paste.",
+  input_schema: {
+    type: "object",
+    properties: {
+      name: { type: "string", description: "Short Title-case skill name." },
+      description: {
+        type: "string",
+        description: "What it does + WHEN it should trigger (task/context based, not the user restating preferences).",
+      },
+      instructions: {
+        type: "string",
+        description: "The SKILL.md body: imperative steps and the preferences to apply automatically.",
+      },
+    },
+    required: ["name", "description", "instructions"],
+  },
+};
+
+/** Update an existing skill (matched by name) by folding in a new preference. */
+export const UPDATE_SKILL_TOOL = {
+  name: "update_skill",
+  description:
+    "Update an existing Skill the user already has by folding in a new standing preference. Call with the SAME name as that skill and the full revised description + instructions. This is the only way the update is persisted.",
+  input_schema: {
+    type: "object",
+    properties: {
+      name: { type: "string", description: "The existing skill's name (unchanged)." },
+      description: { type: "string", description: "Revised description (still task-based trigger)." },
+      instructions: { type: "string", description: "Full revised SKILL.md body, keeping prior behavior + the new preference." },
+    },
+    required: ["name", "description", "instructions"],
+  },
+};
+
+function parseSkillMd(md: string): { name: string; description: string; body: string } {
+  const m = md.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
+  const fm = m?.[1] ?? "";
+  return {
+    name: fm.match(/name:\s*(.*)/)?.[1]?.trim() ?? "skill-creator",
+    description: fm.match(/description:\s*(.*)/)?.[1]?.trim() ?? "",
+    body: (m?.[2] ?? md).trim(),
+  };
+}
+
+// Register the skill-creator with the Skills API once per process and reuse the
+// id, so its (modified, tool-oriented) guidance is mounted into the chat
+// container. Memoized; on failure we retry on the next call.
+let skillCreatorRef: Promise<{ skill_id: string; version: string }> | null = null;
+export function getSkillCreatorRef(): Promise<{ skill_id: string; version: string }> {
+  if (!skillCreatorRef) {
+    skillCreatorRef = (async () => {
+      const md = readFileSync(new URL("../lib/skills/skill-creator/SKILL.md", import.meta.url), "utf8");
+      const { name, description, body } = parseSkillMd(md);
+      const reg = await registerSkill({ name, description, instructions: body });
+      return { skill_id: reg.skillId, version: reg.skillVersion };
+    })().catch((e) => {
+      skillCreatorRef = null; // allow retry
+      throw e;
+    });
+  }
+  return skillCreatorRef;
+}
 
 function slugify(name: string): string {
   const base =
@@ -71,14 +139,20 @@ export async function deleteSkillRemote(skillId: string): Promise<void> {
 }
 
 /**
- * Build the `container.skills` array from the user's enabled, registered skills
- * (max 8 per the API). Returns null when there are none, so the caller can do a
- * plain (container-free) completion.
+ * Build the `container.skills` array: the skill-creator (so its guidance is
+ * available for authoring) plus the user's enabled, registered skills (cap 8
+ * total per the API).
  */
-export function skillContainer(skills: Skill[]): { skills: Array<Record<string, string>> } | null {
-  const refs = skills
-    .filter((s) => s.enabled && s.skillId)
-    .slice(0, 8)
-    .map((s) => ({ type: "custom", skill_id: s.skillId!, version: s.skillVersion ?? "latest" }));
-  return refs.length ? { skills: refs } : null;
+export function skillContainer(
+  skills: Skill[],
+  creatorRef?: { skill_id: string; version: string },
+): { skills: Array<Record<string, string>> } {
+  const refs: Array<Record<string, string>> = [];
+  if (creatorRef) {
+    refs.push({ type: "custom", skill_id: creatorRef.skill_id, version: creatorRef.version });
+  }
+  for (const s of skills.filter((s) => s.enabled && s.skillId).slice(0, 7)) {
+    refs.push({ type: "custom", skill_id: s.skillId!, version: s.skillVersion ?? "latest" });
+  }
+  return { skills: refs };
 }
