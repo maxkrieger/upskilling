@@ -10,8 +10,13 @@ export function ThinkingGlyph({ className = "" }: { className?: string }) {
     const t = setInterval(() => setI((x) => (x + 1) % FRAMES.length), 200);
     return () => clearInterval(t);
   }, []);
+  // Fixed em-width, centered box so the varying glyph widths don't shift
+  // adjacent text (e.g. the "Working…" label).
   return (
-    <span className={className} aria-hidden>
+    <span
+      className={`inline-block w-[1.15em] text-center leading-none ${className}`}
+      aria-hidden
+    >
       {FRAMES[i]}
     </span>
   );
