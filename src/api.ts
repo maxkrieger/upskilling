@@ -22,8 +22,8 @@ export interface ChatStreamHandlers {
   onDelta?: (text: string) => void;
   /** A skill the model just created/updated via tool call (persist it locally). */
   onSkill?: (payload: { skill: Skill; kind: "create" | "update"; replacesLocalId?: string }) => void;
-  /** Local ids of the skills that actually fired in this response. */
-  onApplied?: (ids: string[]) => void;
+  /** A mounted skill fired at content offset `at` — splice an inline indicator. */
+  onSkillUsed?: (use: { id: string; name: string; at: number }) => void;
   /** The session cookie was missing/expired (401) — re-show the gate. */
   onUnauthorized?: () => void;
   onError?: (message: string) => void;
@@ -86,7 +86,8 @@ function parseEvent(raw: string, handlers: ChatStreamHandlers) {
     else if (event === "delta") handlers.onDelta?.((parsed as { text: string }).text);
     else if (event === "skill")
       handlers.onSkill?.(parsed as { skill: Skill; kind: "create" | "update"; replacesLocalId?: string });
-    else if (event === "applied") handlers.onApplied?.((parsed as { ids: string[] }).ids ?? []);
+    else if (event === "skill-used")
+      handlers.onSkillUsed?.(parsed as { id: string; name: string; at: number });
     else if (event === "error") handlers.onError?.((parsed as { message: string }).message);
   } catch {
     /* ignore malformed event */

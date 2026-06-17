@@ -127,6 +127,62 @@ export const CUE_CASES: CueCase[] = [
     expectCue: false,
   },
 
+  // ---- Update cue: only on an EXPLICIT new standing preference, not mere use ----
+  {
+    name: "lawyer/ordinary use of an active skill (no new preference) -> no cue",
+    profileId: "lawyer",
+    userMessage: "Quick risk read on this vendor NDA before I forward it.",
+    index: indexWith("lawyer", (sets) => {
+      const s = sets.find((x) => x.cluster === "nda-review");
+      if (s) {
+        s.cueStatus = "accepted";
+        s.skillId = "skill_nda";
+      }
+    }),
+    skills: [
+      {
+        id: "skill_nda",
+        name: "NDA Review",
+        description: "Reviews inbound NDAs against the house playbook and flags off-market terms.",
+        instructions:
+          "Make NDAs mutual; CA or DE governing law; no non-solicit riders; flag off-market clauses; output flags + required edits.",
+        source: "user",
+        enabled: true,
+        createdAt: "2026-05-21T00:00:00.000Z",
+        skillId: "sk_nda_remote",
+        skillVersion: "1",
+      },
+    ],
+    expectCue: false,
+  },
+  {
+    name: "lawyer/explicit new standing preference -> update cue",
+    profileId: "lawyer",
+    userMessage: "From now on, always also flag any IP assignment clauses when you review these.",
+    index: indexWith("lawyer", (sets) => {
+      const s = sets.find((x) => x.cluster === "nda-review");
+      if (s) {
+        s.cueStatus = "accepted";
+        s.skillId = "skill_nda";
+      }
+    }),
+    skills: [
+      {
+        id: "skill_nda",
+        name: "NDA Review",
+        description: "Reviews inbound NDAs against the house playbook and flags off-market terms.",
+        instructions:
+          "Make NDAs mutual; CA or DE governing law; no non-solicit riders; flag off-market clauses; output flags + required edits.",
+        source: "user",
+        enabled: true,
+        createdAt: "2026-05-21T00:00:00.000Z",
+        skillId: "sk_nda_remote",
+        skillVersion: "1",
+      },
+    ],
+    expectCue: true,
+  },
+
   // ---- Negative: brand-new workflow, no prior occurrence ----
   {
     name: "analyst/first-ever SQL request (empty index)",

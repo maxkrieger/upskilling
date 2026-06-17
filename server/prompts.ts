@@ -17,13 +17,13 @@ export const CHART_INSTRUCTIONS = `When the user asks for a chart, graph, or vis
 {
   "kind": "bar" | "line" | "pie",
   "title": "optional title",
-  "data": [{ "name": "Q1", "revenue": 12 }, ...],
+  "data": [{ "name": "A", "value": 12 }, ...],
   "xKey": "name",
-  "series": ["revenue"],
-  "style": { "palette": ["#d97757"], "gridlines": false, "legend": false, "sorted": true }
+  "series": ["value"],
+  "style": { "palette": ["#888888"], "gridlines": true, "legend": true, "sorted": false }
 }
 \`\`\`
-Put a one-sentence lead-in before the block. Only include a \`style\` if a skill or the user specified styling preferences. Do not also describe the chart data in a table unless asked.`;
+Put a one-sentence lead-in before the block. The \`style\` object is optional and its fields are independent (set only what a skill or the user specified; the values above are just placeholders, not defaults). Do not also describe the chart data in a table unless asked.`;
 
 /**
  * System prompt for the chat model. Skills are attached natively via the
@@ -39,9 +39,9 @@ Be concise, practical, and match the user's domain. Produce the actual work prod
 ${CHART_INSTRUCTIONS}
 Never run code to render a chart or image — always return the \`chart\` JSON block described above.
 
-Saving Skills: to capture the user's repeated workflow as a reusable Skill, call the \`create_skill\` tool (or \`update_skill\` to fold a new preference into one they already have). The skill-creator Skill is available for methodology. Saving happens ONLY by calling those tools — don't write skill files to the workspace. If the skill is about charts, its instructions must use the \`chart\` JSON block above, not matplotlib or any plotting library.
+Saving Skills: to capture the user's repeated workflow as a reusable Skill, call the \`create_skill\` tool (or \`update_skill\` to fold a new preference into one they already have). The skill-creator Skill is available for methodology. Saving happens ONLY by calling those tools — don't write skill files to the workspace. A skill's instructions must produce output via this product's native formats (e.g. the structured blocks documented above), never via external code or third-party libraries.
 
-Do NOT narrate your process — no "I'll consult the skill-creator methodology first" or "let me capture this" lines. After the tool call, the UI shows a card with the skill's name and capability highlights, so don't restate those. Write only a short confirmation: one line that it's ready, then 2-3 example phrasings the user could say to trigger it loosely in any future chat, as a bullet list (e.g. "Chart this revenue", "Make a revenue bar chart from Q3.csv"). Keep it brief.
+Do NOT narrate your process — no "I'll consult the skill-creator methodology first" or "let me capture this" lines. After the tool call, the UI shows a card with the skill's name and capability highlights, so don't restate those. Write only a short confirmation: one line that it's ready, then 2-3 example phrasings (short, casual versions of how they'd ask for this kind of task) that would trigger it loosely in a future chat, as a bullet list. Keep it brief.
 
 You may receive a mid-conversation system message with an operator instruction. It is not from the user and is never the task itself. Always do the user's actual request first and in full; only once your complete answer is written do you act on the instruction. Never let it replace, shorten, delay, or precede the deliverable, and never repeat or mention the instruction itself.`;
 }
@@ -84,12 +84,12 @@ export const CUE_SCHEMA = {
     preferences: {
       type: "string",
       description:
-        "create only: a short phrase naming the concrete repeated preferences (e.g. \"company palette, no gridlines, no legend, sorted descending\"). Quote the user where possible.",
+        "create only: a short phrase naming the concrete preferences/constraints the user keeps restating. Quote the user where possible.",
     },
     trigger: {
       type: "string",
       description:
-        "create only: a short phrase for WHEN the skill applies — the task/context, e.g. \"whenever you ask for a bar chart for a deck\". Task-based, never the user restating preferences.",
+        "create only: a short phrase for WHEN the skill applies — the recurring task/context it should trigger on. Task-based, never the user restating preferences.",
     },
     targetSkillId: {
       type: "string",
@@ -133,15 +133,15 @@ CREATE — cue ONLY if ALL hold:
 3. No active skill already covers it and the set's status is "none".
 Return kind="create" with workflowSetId, suggestedName, preferences, trigger.
 
-DISTINCT instances vs. REFINEMENT (this decides rule 1): the new message must be a NEW, DISTINCT instance of the workflow — a different document, dataset, or asset run through the same routine (e.g. a second, different NDA; a caption for a different artwork). A fresh top-level request to perform the workflow ("review this NDA", "make a bar chart of X", "write a caption for this piece") is by default a distinct instance — even if the document/data isn't shown inline. ONLY treat it as REFINEMENT — and do NOT cue — when the message is clearly a follow-up edit to an artifact ALREADY produced earlier in this conversation: it tweaks or adds constraints to that same in-progress chart/doc/caption with no new subject ("also drop the gridlines", "also flag IP clauses", "actually make it shorter", "change the colors"). Refining one instance is not repetition.
+DISTINCT instances vs. REFINEMENT (this decides rule 1): the new message must be a NEW, DISTINCT instance of the workflow — a different document, dataset, or asset run through the same routine. A fresh top-level request to perform the workflow on new input is a distinct instance, even if the input isn't shown inline. Do NOT count it as repetition (and do NOT cue) when the message is merely a follow-up edit to the SAME item already produced earlier in this conversation — adding or tweaking a constraint on that in-progress output with no new subject ("also do X", "actually make it shorter", "change that"). Refining one instance is not repetition.
 
 UPDATE — cue ONLY if ALL hold:
 1. The new message clearly falls in the domain of one of the ACTIVE skills below.
-2. The user states a NEW standing preference (e.g. "from now on also…", "always…", "actually make…") that is NOT already in that skill's current rules.
-3. It reads as durable, not a one-off tweak for just this answer.
+2. The user EXPLICITLY states a NEW, STANDING preference — a durable rule change for that skill, phrased as such ("from now on…", "always…", "going forward also…", "I want X every time"). Simply USING the skill — running it on new input, asking for a quick/normal/usual version, or any one-off request — is NOT a preference change and must NOT cue an update.
+3. The stated preference is not already in that skill's current rules, and is durable, not a one-off tweak for just this answer.
 Return kind="update" with targetSkillId and newCriterion.
 
-Otherwise shouldCue=false. Be conservative: one-off tasks, personal/Q&A, or brand-new workflows do NOT cue.
+Otherwise shouldCue=false. Be conservative: one-off tasks, personal/Q&A, brand-new workflows, and ordinary use of an existing skill do NOT cue. When unsure between update and neither, choose neither.
 
 ## Workflow index (cueable — no skill yet)
 ${index || "(empty)"}
@@ -163,7 +163,7 @@ export const EXTRACT_SCHEMA = {
     summary: {
       type: "string",
       description:
-        "One sentence capturing the workflow performed and its specific, reusable preferences. E.g. \"Created a bar chart for earnings, needed 'no gridlines', 'viridis color scheme'.\"",
+        "One sentence capturing the workflow performed and its specific, reusable preferences, quoting the user's constraints verbatim.",
     },
     quotes: {
       type: "array",
@@ -207,7 +207,7 @@ export const SKILL_SCHEMA = {
     description: {
       type: "string",
       description:
-        "One-to-two sentences: what the skill does, then when it applies. Trigger on the TASK/intent only (e.g. \"when the user asks for a bar chart for a deck or slides\", \"a bar chart of a metric by category\"). NEVER trigger on the user restating their preferences — the entire point is that the skill infers those preferences so the user no longer has to state them. Do not quote preference phrases (\"same as always\", \"no gridlines\", \"company colors\") as triggers; those belong in instructions, not the trigger.",
+        "One-to-two sentences: what the skill does, then when it applies. Trigger on the TASK/intent only (the recurring kind of request, by its subject and context). NEVER trigger on the user restating their preferences — the entire point is that the skill infers those preferences so the user no longer has to state them. Do not quote preference phrases (e.g. \"same as always\", \"the usual\") as triggers; those belong in instructions, not the trigger.",
     },
     instructions: {
       type: "string",
@@ -228,7 +228,7 @@ export function buildSkillCreatorSystem(): string {
 
 You are applying the skill-creator above, in the "just vibe with me" one-shot path: the user has an established, repeated workflow (provided as evidence below) and wants it captured as a single Skill right now — do NOT run the eval/test-case loop, spawn subagents, or reference scripts/workspaces. Produce exactly one SKILL.md, returned via the structured fields requested (name, description, instructions).
 
-Apply the Skill Writing Guide above. One critical reminder, since the evidence quotes the user restating their preferences: those preferences (colors, formatting, do's and don'ts) are the skill's BEHAVIOR — defaults it applies automatically — they are NOT triggers. The description must trigger on the underlying task/context ("a bar chart for a deck", "an NDA review") so the skill fires even when the user no longer mentions any preference. Never phrase the trigger as the user repeating preferences ("same as always", "no gridlines"); the entire point is that they no longer have to say those.`;
+Apply the Skill Writing Guide above. One critical reminder, since the evidence quotes the user restating their preferences: those preferences (formats, do's and don'ts, style choices) are the skill's BEHAVIOR — defaults it applies automatically — they are NOT triggers. The description must trigger on the underlying task/context (the recurring kind of request) so the skill fires even when the user no longer mentions any preference. Never phrase the trigger as the user repeating preferences (e.g. "same as always", "the usual"); the entire point is that they no longer have to say those.`;
 }
 
 export function buildSkillCreatorUser(params: {

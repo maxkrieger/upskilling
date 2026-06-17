@@ -117,7 +117,7 @@ async function main() {
     const meta = events.find((e) => e.event === "meta");
     const deltas = events.filter((e) => e.event === "delta");
     const skillEv = events.find((e) => e.event === "skill");
-    const applied = events.find((e) => e.event === "applied");
+    const used = events.filter((e) => e.event === "skill-used");
 
     check("SSE: meta event carries a traceId", !!meta?.data?.traceId, JSON.stringify(meta?.data));
     check("SSE: streamed at least one delta", deltas.length > 0);
@@ -132,9 +132,9 @@ async function main() {
       JSON.stringify(skillEv?.data?.skill?.highlights),
     );
     check(
-      "SSE: applied event reports the skill-creator as used (shown in the UI)",
-      Array.isArray(applied?.data?.ids) && applied.data.ids.includes("skill_creator_builtin"),
-      JSON.stringify(applied?.data),
+      "SSE: skill-used reports the skill-creator firing with a content offset",
+      used.some((e) => e.data?.id === "skill_creator_builtin" && typeof e.data?.at === "number"),
+      JSON.stringify(used.map((e) => e.data)),
     );
     createdSkillId = skillEv?.data?.skill?.skillId;
   } finally {

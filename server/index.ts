@@ -158,9 +158,7 @@ app.post("/api/chat", async (c) => {
 
   const meta: ChatMeta = {
     banner,
-    // Actual firings are detected during streaming and sent via an `applied`
-    // event — start empty rather than guessing from the enabled set.
-    appliedSkillIds: [],
+    // Firings are reported during streaming via `skill-used` events.
     traceId: tr.id,
   };
 
@@ -196,7 +194,11 @@ app.post("/api/chat", async (c) => {
     const base = nameSlugBase(s.name);
     if (!baseToLocalId.has(base)) baseToLocalId.set(base, s.id);
   }
-  const firedIds = new Set<string>();
+  const nameOf = (localId: string) =>
+    localId === "skill_creator_builtin"
+      ? "skill-creator"
+      : (body.skills ?? []).find((s) => s.id === localId)?.name ?? "skill";
+  const emittedUses = new Set<string>(); // one "using" indicator per skill per reply
 
   if (cueInstruction) {
     messages.push({ role: "system", content: cueInstruction });
@@ -226,13 +228,18 @@ app.post("/api/chat", async (c) => {
             fullText += delta;
             void stream.writeSSE({ event: "delta", data: JSON.stringify({ text: delta }) });
           },
-          // A mounted skill was loaded (it fired) — map its slug to a local id so
-          // the UI shows which skills were used (incl. the skill-creator, which
-          // fires on a creation turn since its tool descriptions require it).
-          onSkillFired: (slug) => {
+          // A mounted skill was loaded (it fired) — emit a "skill-used" event with
+          // the content offset so the client splices a "using skill" indicator at
+          // that gap (incl. the skill-creator, which fires on a creation turn).
+          onSkillFired: (slug, at) => {
             const localId = slugToLocalId.get(slug) ?? baseToLocalId.get(slugBase(slug));
-            tr.log("skill.fired", { slug, mappedTo: localId ?? "(unmapped)" });
-            if (localId) firedIds.add(localId);
+            tr.log("skill.fired", { slug, at, mappedTo: localId ?? "(unmapped)" });
+            if (!localId || emittedUses.has(localId)) return;
+            emittedUses.add(localId);
+            void stream.writeSSE({
+              event: "skill-used",
+              data: JSON.stringify({ id: localId, name: nameOf(localId), at }),
+            });
           },
           // The model persists skills by calling these tools; we register with
           // the Skills API and push the saved skill to the client (localStorage).
@@ -302,10 +309,7 @@ app.post("/api/chat", async (c) => {
         data: JSON.stringify({ message: (err as Error).message }),
       });
     }
-    // Always report which skills fired — even if the stream errored partway,
-    // skills that already loaded should still be marked + counted.
-    await stream.writeSSE({ event: "applied", data: JSON.stringify({ ids: [...firedIds] }) });
-    tr.log("applied", [...firedIds]);
+    // (Skill firings are reported inline via `skill-used` events as they happen.)
     await stream.writeSSE({ event: "done", data: "{}" });
     await tr.end();
   });

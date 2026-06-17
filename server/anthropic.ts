@@ -52,9 +52,9 @@ export type StreamHandlers = {
    * this. Omit to disable tool handling (single turn).
    */
   onToolUse?: (name: string, input: any, id: string) => Promise<string>;
-  /** Called with a skill's slug when the model loads it (reads /skills/<slug>/…),
-   * i.e. the skill actually fired via progressive disclosure. */
-  onSkillFired?: (slug: string) => void;
+  /** Called when the model loads a mounted skill (reads /skills/<slug>/…), with
+   * the content offset where it fired so the UI can splice an indicator inline. */
+  onSkillFired?: (slug: string, at: number) => void;
 };
 
 /**
@@ -90,6 +90,7 @@ export async function streamChat(params: {
 
   // Bounded loop so a client tool_use can be handled and the model can resume.
   for (let turn = 0; turn < 5; turn++) {
+    const turnStartLen = full.length; // content offset at the start of this turn
     const base: Record<string, unknown> = {
       model: params.model ?? ENV.MODEL_MAIN,
       max_tokens: params.maxTokens ?? 2048,
@@ -115,11 +116,17 @@ export async function streamChat(params: {
     if (finalMsg.container?.id) container = { id: finalMsg.container.id };
 
     // Detect skill firings: the model reads `/skills/<slug>/…` when it loads a
-    // mounted skill (progressive disclosure). Surface each slug to the caller.
+    // mounted skill. Report each with the content offset (text before the read
+    // block) so the UI can splice a "using skill" indicator at that exact gap.
     if (params.handlers.onSkillFired) {
+      let textLen = 0;
       for (const b of finalMsg.content ?? []) {
+        if (b.type === "text") {
+          textLen += (b.text ?? "").length;
+          continue;
+        }
         const slug = JSON.stringify(b).match(/\/skills\/([^/"\\]+)\//)?.[1];
-        if (slug) params.handlers.onSkillFired(slug);
+        if (slug) params.handlers.onSkillFired(slug, turnStartLen + textLen);
       }
     }
 

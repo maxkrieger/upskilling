@@ -199,7 +199,7 @@ async function judgeConceptCoverage(
       .join("\n")}\n\nFor each concept, decide if the skill captures it (paraphrase is fine).`,
     schema: COVERAGE_SCHEMA as unknown as Record<string, unknown>,
   });
-  return res.verdicts ?? [];
+  return Array.isArray(res.verdicts) ? res.verdicts : [];
 }
 
 /** Check that a generated skill captures the workflow's key preferences (semantic). */

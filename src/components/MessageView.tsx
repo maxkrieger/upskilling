@@ -1,9 +1,21 @@
+import type { ReactNode } from "react";
 import { BookOpen, FileText, Image as ImageIcon } from "lucide-react";
 import type { Message } from "../../shared/types.ts";
 import { useStore } from "../store.ts";
 import { Markdown } from "./Markdown.tsx";
 import { SkillBanner } from "./SkillBanner.tsx";
 import { ThinkingGlyph } from "./ThinkingGlyph.tsx";
+
+/** Inline indicator spliced where a skill fired mid-reply. */
+function UsingChip({ name }: { name: string }) {
+  return (
+    <div className="my-2">
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-elevated px-2.5 py-1 text-xs text-muted">
+        <BookOpen size={12} className="text-accent" /> Using <span className="font-medium text-ink">{name}</span>
+      </span>
+    </div>
+  );
+}
 
 function AttachmentChips({ message }: { message: Message }) {
   const openAttachment = useStore((s) => s.openAttachment);
@@ -34,11 +46,7 @@ export function MessageView({
   conversationId: string;
   streaming?: boolean;
 }) {
-  const skills = useStore((s) => s.skillsByProfile[s.activeProfileId] ?? s.skillsOf());
   const isUser = message.role === "user";
-  const applied = (message.appliedSkillIds ?? [])
-    .map((id) => skills.find((s) => s.id === id))
-    .filter(Boolean);
 
   if (isUser) {
     return (
@@ -53,52 +61,54 @@ export function MessageView({
     );
   }
 
-  // An accepted result card is spliced inline at the tool-use point; a pending
-  // cue CTA sits below the deliverable.
-  const showBanner = message.banner && !streaming;
+  const showBanner = !!message.banner && !streaming;
   const isCard = showBanner && message.banner!.status === "accepted";
-  const splitAt = isCard ? Math.min(message.cardSplitAt ?? 0, message.content.length) : 0;
-  const card = (
+  const card = showBanner ? (
     <SkillBanner banner={message.banner!} conversationId={conversationId} messageId={message.id} />
-  );
+  ) : null;
+
+  // After the reply finishes, splice inline elements at the content offsets where
+  // they belong: a "using skill" chip wherever a skill fired, and the
+  // created/updated result card at the tool-use point.
+  const inserts: Array<{ at: number; node: ReactNode }> = [];
+  if (!streaming) {
+    for (const u of message.skillUses ?? []) {
+      inserts.push({ at: Math.min(u.at, message.content.length), node: <UsingChip name={u.name} /> });
+    }
+    if (isCard) inserts.push({ at: Math.min(message.cardSplitAt ?? 0, message.content.length), node: card });
+  }
+  inserts.sort((a, b) => a.at - b.at);
+
+  const body: ReactNode[] = [];
+  if (inserts.length) {
+    let cursor = 0;
+    inserts.forEach((ins, i) => {
+      const seg = message.content.slice(cursor, ins.at);
+      if (seg.trim()) body.push(<Markdown key={`s${i}`} content={seg} />);
+      body.push(<div key={`i${i}`}>{ins.node}</div>);
+      cursor = ins.at;
+    });
+    const tail = message.content.slice(cursor);
+    if (tail.trim()) body.push(<Markdown key="tail" content={tail} />);
+  } else if (message.content) {
+    body.push(<Markdown key="c" content={message.content} />);
+  } else if (streaming) {
+    body.push(
+      <div key="w" className="flex items-center gap-2 text-muted">
+        <ThinkingGlyph className="text-lg text-accent" />
+        <span>Working…</span>
+      </div>,
+    );
+  }
 
   return (
     <div className="flex">
       <div className="min-w-0 flex-1">
-        {isCard ? (
-          <>
-            {message.content.slice(0, splitAt).trim() && (
-              <Markdown content={message.content.slice(0, splitAt)} />
-            )}
-            {card}
-            {message.content.slice(splitAt).trim() && (
-              <Markdown content={message.content.slice(splitAt)} />
-            )}
-          </>
-        ) : (
-          <>
-            {message.content ? (
-              <Markdown content={message.content} />
-            ) : streaming ? (
-              <div className="flex items-center gap-2 text-muted">
-                <ThinkingGlyph className="text-lg text-accent" />
-                <span>Working…</span>
-              </div>
-            ) : null}
-            {streaming && message.content && (
-              <ThinkingGlyph fixedWidth={false} className="align-middle text-accent" />
-            )}
-            {showBanner && card}
-          </>
+        {body}
+        {streaming && message.content && (
+          <ThinkingGlyph fixedWidth={false} className="align-middle text-accent" />
         )}
-
-        {applied.length > 0 && (
-          <div className="mt-2 flex items-center gap-1 text-xs text-faint">
-            <BookOpen size={12} />
-            Applied skill{applied.length > 1 ? "s" : ""}:{" "}
-            {applied.map((s) => s!.name).join(", ")}
-          </div>
-        )}
+        {showBanner && !isCard && card}
       </div>
     </div>
   );

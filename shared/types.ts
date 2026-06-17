@@ -69,8 +69,9 @@ export interface Message {
    * tool fired, so the card is spliced inline there (between the pre- and
    * post-tool text) rather than rendered above the whole reply. */
   cardSplitAt?: number;
-  /** Which skill ids were applied to produce this message, if any. */
-  appliedSkillIds?: string[];
+  /** Skills that fired while producing this message, with the content offset at
+   * which each loaded — rendered as inline "using skill" indicators. */
+  skillUses?: Array<{ id: string; name: string; at: number }>;
   createdAt: string; // ISO
 }
 
@@ -189,7 +190,6 @@ export interface ChatRequest {
 /** Sent as the first SSE `meta` event before text streaming begins. */
 export interface ChatMeta {
   banner?: SkillCueBanner;
-  appliedSkillIds: string[];
   /** Dev-only trace id for this turn (see server/trace.ts; logged client-side). */
   traceId?: string;
 }
