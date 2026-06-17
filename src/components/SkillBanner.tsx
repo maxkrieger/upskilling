@@ -20,6 +20,7 @@ export function SkillBanner({
   const setView = useStore((s) => s.setView);
   const skills = useStore((s) => s.skillsByProfile[s.activeProfileId] ?? s.skillsOf());
   const [busy, setBusy] = useState(false);
+  const [dismissing, setDismissing] = useState(false);
 
   const isUpdate = banner.kind === "update";
   // The real created name is only known after a create completes (post-consent).
@@ -37,13 +38,9 @@ export function SkillBanner({
     );
   }
 
-  if (banner.status === "dismissed") {
-    return (
-      <div className="mt-3 rounded-xl border border-border bg-surface/60 px-4 py-2 text-xs text-faint">
-        {isUpdate ? "Left the skill unchanged." : "Skill suggestion dismissed."}
-      </div>
-    );
-  }
+  // Dismissed: nothing remains — the "Not now" click shrinks the card away (below)
+  // and then persists this status, so on any later render we render nothing.
+  if (banner.status === "dismissed") return null;
 
   // Once committed, collapse to a compact line — the skill-creator streams below.
   if (busy && banner.status !== "accepted") {
@@ -78,7 +75,14 @@ export function SkillBanner({
   };
 
   return (
-    <div className="mt-3 animate-rise-in rounded-2xl border border-border bg-surface p-4 shadow-sm">
+    <div
+      onAnimationEnd={
+        dismissing ? () => dismissCue(conversationId, messageId) : undefined
+      }
+      className={`mt-3 rounded-2xl border border-border bg-surface p-4 shadow-sm ${
+        dismissing ? "animate-collapse-away overflow-hidden" : "animate-rise-in"
+      }`}
+    >
       <div className="flex items-center gap-3">
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-peach text-accent">
           <BookOpen size={20} />
@@ -99,14 +103,14 @@ export function SkillBanner({
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <button
-            disabled={busy}
-            onClick={() => dismissCue(conversationId, messageId)}
+            disabled={busy || dismissing}
+            onClick={() => setDismissing(true)}
             className="rounded-lg border border-border px-3 py-2 text-sm text-muted hover:bg-elevated disabled:opacity-60"
           >
             Not now
           </button>
           <button
-            disabled={busy}
+            disabled={busy || dismissing}
             onClick={onAccept}
             className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accentSoft disabled:opacity-60"
           >

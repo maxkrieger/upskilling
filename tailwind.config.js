@@ -26,9 +26,20 @@ export default {
           "0%": { opacity: "0", transform: "translateY(8px)" },
           "100%": { opacity: "1", transform: "translateY(0)" },
         },
+        "collapse-away": {
+          "0%": { opacity: "1", maxHeight: "240px", marginTop: "0.75rem" },
+          "100%": {
+            opacity: "0",
+            maxHeight: "0px",
+            marginTop: "0px",
+            paddingTop: "0px",
+            paddingBottom: "0px",
+          },
+        },
       },
       animation: {
         "rise-in": "rise-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) both",
+        "collapse-away": "collapse-away 0.28s ease-in both",
       },
     },
   },

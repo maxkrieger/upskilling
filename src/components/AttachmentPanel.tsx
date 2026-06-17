@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FileText, Image as ImageIcon, Table2, X } from "lucide-react";
 import type { Attachment } from "../../shared/types.ts";
 import { useStore } from "../store.ts";
@@ -81,40 +81,61 @@ function CsvTable({ text }: { text: string }) {
 export function AttachmentPanel() {
   const att = useStore((s) => s.viewerAttachment);
   const close = useStore((s) => s.closeAttachment);
-  if (!att) return null;
+  // Keep rendering the last attachment while the panel slides closed so its
+  // contents don't blank out mid-transition.
+  const [shown, setShown] = useState(att);
+  useEffect(() => {
+    if (att) setShown(att);
+  }, [att]);
 
-  const isCsv = att.kind === "csv" || /\.csv$/i.test(att.name);
-  const Icon = att.kind === "image" ? ImageIcon : isCsv ? Table2 : FileText;
+  const open = !!att;
+  const display = att ?? shown;
+  const isCsv = !!display && (display.kind === "csv" || /\.csv$/i.test(display.name));
+  const Icon = display?.kind === "image" ? ImageIcon : isCsv ? Table2 : FileText;
 
   return (
-    <aside className="flex h-full w-[28rem] shrink-0 flex-col border-l border-border bg-canvas">
-      <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
-        <div className="flex min-w-0 items-center gap-2">
-          <Icon size={16} className="shrink-0 text-faint" />
-          <span className="truncate text-sm font-medium text-ink" title={att.name}>
-            {att.name}
-          </span>
-        </div>
-        <button
-          onClick={close}
-          className="rounded-md p-1 text-faint hover:bg-elevated hover:text-ink"
-          aria-label="Close attachment viewer"
-        >
-          <X size={16} />
-        </button>
-      </div>
+    <div
+      className={`h-full shrink-0 overflow-hidden transition-[width] duration-300 ease-out ${
+        open ? "w-[28rem]" : "w-0"
+      }`}
+    >
+      <aside
+        className={`flex h-full w-[28rem] flex-col border-l border-border bg-canvas transition-transform duration-300 ease-out ${
+          open ? "translate-x-0" : "translate-x-full"
+        }`}
+      >
+        {display && (
+          <>
+            <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
+              <div className="flex min-w-0 items-center gap-2">
+                <Icon size={16} className="shrink-0 text-faint" />
+                <span className="truncate text-sm font-medium text-ink" title={display.name}>
+                  {display.name}
+                </span>
+              </div>
+              <button
+                onClick={close}
+                className="rounded-md p-1 text-faint hover:bg-elevated hover:text-ink"
+                aria-label="Close attachment viewer"
+              >
+                <X size={16} />
+              </button>
+            </div>
 
-      <div className="scrollbar-thin flex-1 overflow-auto p-4">
-        {att.kind === "image" ? (
-          <img src={att.content} alt={att.name} className="max-w-full rounded-lg" />
-        ) : isCsv ? (
-          <CsvTable text={att.content} />
-        ) : (
-          <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-ink">
-            {att.content}
-          </pre>
+            <div className="scrollbar-thin flex-1 overflow-auto p-4">
+              {display.kind === "image" ? (
+                <img src={display.content} alt={display.name} className="max-w-full rounded-lg" />
+              ) : isCsv ? (
+                <CsvTable text={display.content} />
+              ) : (
+                <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-ink">
+                  {display.content}
+                </pre>
+              )}
+            </div>
+          </>
         )}
-      </div>
-    </aside>
+      </aside>
+    </div>
   );
 }
