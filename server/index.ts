@@ -386,9 +386,22 @@ function runningDirectly(): boolean {
   }
 }
 if (runningDirectly()) {
-  serve({ fetch: app.fetch, port: ENV.API_PORT }, (info) => {
+  const server = serve({ fetch: app.fetch, port: ENV.API_PORT }, (info) => {
     console.log(`[api] listening on http://localhost:${info.port} (model: ${ENV.MODEL_MAIN})`);
   });
+  // Exit promptly on reload/quit. Without this the listening socket + the
+  // Anthropic SDK's keep-alive sockets hold the event loop open, so `tsx watch`
+  // hits its 5s timeout and force-kills on every restart.
+  let closing = false;
+  for (const sig of ["SIGTERM", "SIGINT"] as const) {
+    process.once(sig, () => {
+      if (closing) process.exit(0);
+      closing = true;
+      server.close(() => process.exit(0));
+      // Don't wait on in-flight streams to drain.
+      setTimeout(() => process.exit(0), 250).unref();
+    });
+  }
 }
 
 export default app;
