@@ -5,6 +5,9 @@ config();
 export const ENV = {
   ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY ?? "",
   WEBSITE_DEMO_PASSWORD: process.env.WEBSITE_DEMO_PASSWORD ?? "",
+  // Key for signing the auth cookie (HMAC). Falls back to the demo password so a
+  // separate secret is optional, but set a distinct random value in prod.
+  SESSION_SECRET: process.env.SESSION_SECRET ?? "",
   // Capable model for user-facing chat.
   MODEL_MAIN: process.env.ANTHROPIC_MODEL ?? "claude-opus-4-8",
   // Model for background jobs (cueing decider, extraction). Sonnet — haiku was

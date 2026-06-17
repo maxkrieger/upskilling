@@ -2,7 +2,6 @@ import { realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
-import { cors } from "hono/cors";
 import { getCookie, setCookie } from "hono/cookie";
 import { streamSSE } from "hono/streaming";
 import { ENV } from "./env.ts";
@@ -41,7 +40,25 @@ import type {
 } from "../shared/types.ts";
 
 const app = new Hono();
-app.use("/api/*", cors());
+// No CORS: the SPA and API are same-origin (served together), so cross-origin
+// requests should get no CORS grant. (A wide-open `cors()` would needlessly
+// expose the API to other origins.)
+
+// The auth cookie holds an HMAC token (not the password), signed with
+// SESSION_SECRET (falling back to the demo password). HttpOnly so XSS can't read
+// it; the browser auto-sends it on every same-origin /api request.
+const AUTH_KEY = () => ENV.SESSION_SECRET || ENV.WEBSITE_DEMO_PASSWORD;
+async function sessionToken(): Promise<string> {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(AUTH_KEY()),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode("demo_auth_v1"));
+  return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
 
 // ---- Auth gate: every /api/* route requires the demo cookie that /api/auth
 // sets on a correct password. Exempt only the endpoints needed to authenticate
@@ -51,7 +68,7 @@ const AUTH_EXEMPT = new Set(["/api/health", "/api/auth"]);
 app.use("/api/*", async (c, next) => {
   if (!ENV.WEBSITE_DEMO_PASSWORD) return next();
   if (AUTH_EXEMPT.has(c.req.path)) return next();
-  if (getCookie(c, "demo_auth") === ENV.WEBSITE_DEMO_PASSWORD) return next();
+  if (getCookie(c, "demo_auth") === (await sessionToken())) return next();
   return c.json({ error: "unauthorized" }, 401);
 });
 
@@ -88,9 +105,8 @@ app.post("/api/auth", async (c) => {
   const { password } = await c.req.json<{ password: string }>();
   const ok = !!ENV.WEBSITE_DEMO_PASSWORD && password === ENV.WEBSITE_DEMO_PASSWORD;
   if (ok) {
-    // Set the cookie the requireAuth middleware checks. HttpOnly so XSS can't
-    // read it; the browser auto-sends it on every same-origin /api request.
-    setCookie(c, "demo_auth", ENV.WEBSITE_DEMO_PASSWORD, {
+    // Store the signed HMAC token (never the password itself) in the cookie.
+    setCookie(c, "demo_auth", await sessionToken(), {
       httpOnly: true,
       sameSite: "Lax",
       path: "/",
