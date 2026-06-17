@@ -126,7 +126,11 @@ async function main() {
       skillEv?.data?.kind === "create" && !!skillEv?.data?.skill?.skillId,
       JSON.stringify(skillEv?.data?.skill ?? null).slice(0, 200),
     );
-    check("SSE: applied event present", !!applied);
+    check(
+      "SSE: applied event reports the skill-creator as used (shown in the UI)",
+      Array.isArray(applied?.data?.ids) && applied.data.ids.includes("skill_creator_builtin"),
+      JSON.stringify(applied?.data),
+    );
     createdSkillId = skillEv?.data?.skill?.skillId;
   } finally {
     // Clean up everything this run registered with the Skills API.

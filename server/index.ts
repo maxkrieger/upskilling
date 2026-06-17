@@ -226,14 +226,13 @@ app.post("/api/chat", async (c) => {
             fullText += delta;
             void stream.writeSSE({ event: "delta", data: JSON.stringify({ text: delta }) });
           },
-          // A mounted skill was loaded (it fired) — map its slug to a local id.
-          // The skill-creator fires on every authoring turn (its tool descriptions
-          // require consulting it), so it's traced but excluded from the user-facing
-          // "applied" set / fire counts — it's infrastructure, not the user's skill.
+          // A mounted skill was loaded (it fired) — map its slug to a local id so
+          // the UI shows which skills were used (incl. the skill-creator, which
+          // fires on a creation turn since its tool descriptions require it).
           onSkillFired: (slug) => {
             const localId = slugToLocalId.get(slug) ?? baseToLocalId.get(slugBase(slug));
             tr.log("skill.fired", { slug, mappedTo: localId ?? "(unmapped)" });
-            if (localId && localId !== "skill_creator_builtin") firedIds.add(localId);
+            if (localId) firedIds.add(localId);
           },
           // The model persists skills by calling these tools; we register with
           // the Skills API and push the saved skill to the client (localStorage).
