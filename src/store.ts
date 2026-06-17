@@ -253,6 +253,8 @@ export const useStore = create<State>()(
                 if (am) am.content += `\n\n_⚠️ ${msg}_`;
               });
             },
+            // Cookie missing/expired — drop back to the gate so the user re-auths.
+            onUnauthorized: () => set({ authed: false }),
           },
         );
 

@@ -22,6 +22,8 @@ export interface ChatStreamHandlers {
   onDelta?: (text: string) => void;
   /** A skill the model just created/updated via tool call (persist it locally). */
   onSkill?: (payload: { skill: Skill; kind: "create" | "update"; replacesLocalId?: string }) => void;
+  /** The session cookie was missing/expired (401) — re-show the gate. */
+  onUnauthorized?: () => void;
   onError?: (message: string) => void;
   onDone?: () => void;
 }
@@ -38,6 +40,11 @@ export async function streamChat(
     body: JSON.stringify(req),
     signal,
   });
+  if (res.status === 401) {
+    handlers.onUnauthorized?.();
+    handlers.onError?.("Session expired — please log in again.");
+    return;
+  }
   if (!res.ok || !res.body) {
     handlers.onError?.(`chat request failed (${res.status})`);
     return;

@@ -1,6 +1,7 @@
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { getCookie, setCookie } from "hono/cookie";
 import { streamSSE } from "hono/streaming";
 import { ENV } from "./env.ts";
 import { jsonCall, streamChat } from "./anthropic.ts";
@@ -37,6 +38,18 @@ import type {
 const app = new Hono();
 app.use("/api/*", cors());
 
+// ---- Auth gate: every /api/* route requires the demo cookie that /api/auth
+// sets on a correct password. Exempt only the endpoints needed to authenticate
+// or probe liveness. Enforced only when a demo password is configured (so local
+// dev without one stays open). See .claude/skills/authenticated-endpoints. ----
+const AUTH_EXEMPT = new Set(["/api/health", "/api/auth"]);
+app.use("/api/*", async (c, next) => {
+  if (!ENV.WEBSITE_DEMO_PASSWORD) return next();
+  if (AUTH_EXEMPT.has(c.req.path)) return next();
+  if (getCookie(c, "demo_auth") === ENV.WEBSITE_DEMO_PASSWORD) return next();
+  return c.json({ error: "unauthorized" }, 401);
+});
+
 // Global handler: any uncaught route error is alerted to Discord and returns 500.
 app.onError((err, c) => {
   void reportError(err, {
@@ -69,6 +82,17 @@ app.post("/api/report-error", async (c) => {
 app.post("/api/auth", async (c) => {
   const { password } = await c.req.json<{ password: string }>();
   const ok = !!ENV.WEBSITE_DEMO_PASSWORD && password === ENV.WEBSITE_DEMO_PASSWORD;
+  if (ok) {
+    // Set the cookie the requireAuth middleware checks. HttpOnly so XSS can't
+    // read it; the browser auto-sends it on every same-origin /api request.
+    setCookie(c, "demo_auth", ENV.WEBSITE_DEMO_PASSWORD, {
+      httpOnly: true,
+      sameSite: "Lax",
+      path: "/",
+      secure: ENV.ENVIRONMENT === "production",
+      maxAge: 60 * 60 * 24 * 30,
+    });
+  }
   return c.json({ ok });
 });
 
