@@ -52,6 +52,9 @@ export type StreamHandlers = {
    * this. Omit to disable tool handling (single turn).
    */
   onToolUse?: (name: string, input: any, id: string) => Promise<string>;
+  /** Called with a skill's slug when the model loads it (reads /skills/<slug>/…),
+   * i.e. the skill actually fired via progressive disclosure. */
+  onSkillFired?: (slug: string) => void;
 };
 
 /**
@@ -106,6 +109,15 @@ export async function streamChat(params: {
 
     const finalMsg: any = await stream.finalMessage();
 
+    // Detect skill firings: the model reads `/skills/<slug>/…` when it loads a
+    // mounted skill (progressive disclosure). Surface each slug to the caller.
+    if (params.handlers.onSkillFired) {
+      for (const b of finalMsg.content ?? []) {
+        const slug = JSON.stringify(b).match(/\/skills\/([^/"\\]+)\//)?.[1];
+        if (slug) params.handlers.onSkillFired(slug);
+      }
+    }
+
     const clientToolUses = (finalMsg.content ?? []).filter(
       (b: any) => b.type === "tool_use",
     );
@@ -130,6 +142,14 @@ export async function streamChat(params: {
       results.push({ type: "tool_result", tool_use_id: tu.id, content });
     }
     messages.push({ role: "user", content: results });
+
+    // The model's post-tool confirmation streams into the same message as its
+    // pre-tool text — separate them with a paragraph break so they don't glue
+    // together ("…apply automatically.Saved!").
+    if (full && !full.endsWith("\n")) {
+      full += "\n\n";
+      params.handlers.onText("\n\n");
+    }
   }
 
   return full;

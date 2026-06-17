@@ -204,11 +204,25 @@ export const useStore = create<State>()(
           },
           {
             onMeta: (meta: ChatMeta) => {
+              if (import.meta.env.DEV && meta.traceId) console.debug(`[chat trace] ${meta.traceId}`);
               pendingBanner = meta.banner; // shown after the reply streams in
+            },
+            // Which skills actually fired (loaded) this response: tag the message
+            // and bump each skill's fire counter (shown in Customize).
+            onApplied: (ids) => {
               writeConvos((c) => {
                 const am = c.messages.find((m) => m.id === assistantMsg.id);
-                if (am) am.appliedSkillIds = meta.appliedSkillIds;
+                if (am) am.appliedSkillIds = ids;
               });
+              if (ids.length) {
+                set((s) => {
+                  const cur = s.skillsByProfile[pid] ?? BUILTIN_SKILLS;
+                  const next = cur.map((sk) =>
+                    ids.includes(sk.id) ? { ...sk, fireCount: (sk.fireCount ?? 0) + 1 } : sk,
+                  );
+                  return { skillsByProfile: { ...s.skillsByProfile, [pid]: next } };
+                });
+              }
             },
             // The model created/updated a skill via tool call — persist it and
             // resolve the most recent pending cue banner in this conversation.

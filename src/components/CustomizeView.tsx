@@ -120,10 +120,20 @@ export function CustomizeView() {
                   }`}
                 >
                   <span className="truncate">{s.name}</span>
-                  <ChevronDown
-                    size={14}
-                    className={`shrink-0 transition-transform ${active ? "rotate-180 text-faint" : "text-faint/0"}`}
-                  />
+                  <span className="flex shrink-0 items-center gap-2">
+                    {(s.fireCount ?? 0) > 0 && (
+                      <span
+                        title={`Fired ${s.fireCount} time${s.fireCount === 1 ? "" : "s"}`}
+                        className="rounded-full bg-peach px-1.5 py-0.5 text-[11px] font-medium tabular-nums text-accent"
+                      >
+                        {s.fireCount}×
+                      </span>
+                    )}
+                    <ChevronDown
+                      size={14}
+                      className={`transition-transform ${active ? "rotate-180 text-faint" : "text-faint/0"}`}
+                    />
+                  </span>
                 </button>
                 {active && (
                   <div className="mb-1 ml-3 border-l border-border pl-3 text-xs text-faint">
@@ -247,6 +257,10 @@ export function CustomizeView() {
                   {selected.enabled ? "Active" : "Off"}
                   {selected.fromWorkflowSetId && " · from your workflow"}
                 </div>
+              </div>
+              <div>
+                <div className="text-xs text-faint">Times fired</div>
+                <div className="mt-0.5 text-sm tabular-nums text-ink">{selected.fireCount ?? 0}</div>
               </div>
             </div>
 

@@ -5,8 +5,14 @@ import type { Skill } from "../shared/types.ts";
 
 const beta = anthropic.beta as any;
 
-/** Betas + tool required to attach Skills to a Messages API request. */
-export const SKILLS_BETAS = ["code-execution-2025-08-25", "skills-2025-10-02"];
+/** Betas + tool required to attach Skills to a Messages API request:
+ * code execution (required for Skills), the Skills API, and the Files API
+ * (uploading/downloading files to/from the container). */
+export const SKILLS_BETAS = [
+  "code-execution-2025-08-25",
+  "skills-2025-10-02",
+  "files-api-2025-04-14",
+];
 export const CODE_EXECUTION_TOOL = { type: "code_execution_20250825", name: "code_execution" };
 
 /** Client tools the chat model calls to persist skills (the ONLY way to save). */
@@ -60,20 +66,41 @@ function parseSkillMd(md: string): { name: string; description: string; body: st
 // Register the skill-creator with the Skills API once per process and reuse the
 // id, so its (modified, tool-oriented) guidance is mounted into the chat
 // container. Memoized; on failure we retry on the next call.
-let skillCreatorRef: Promise<{ skill_id: string; version: string }> | null = null;
-export function getSkillCreatorRef(): Promise<{ skill_id: string; version: string }> {
+let skillCreatorRef: Promise<{ skill_id: string; version: string; slug: string }> | null = null;
+export function getSkillCreatorRef(): Promise<{ skill_id: string; version: string; slug: string }> {
   if (!skillCreatorRef) {
     skillCreatorRef = (async () => {
       const md = readFileSync(new URL("../lib/skills/skill-creator/SKILL.md", import.meta.url), "utf8");
       const { name, description, body } = parseSkillMd(md);
       const reg = await registerSkill({ name, description, instructions: body });
-      return { skill_id: reg.skillId, version: reg.skillVersion };
+      return { skill_id: reg.skillId, version: reg.skillVersion, slug: reg.slug };
     })().catch((e) => {
       skillCreatorRef = null; // allow retry
       throw e;
     });
   }
   return skillCreatorRef;
+}
+
+/** Extract a skill's directory slug from a registered SKILL.md path string. */
+export function firedSlugFrom(text: string): string | null {
+  return text.match(/\/skills\/([^/"\\]+)\//)?.[1] ?? null;
+}
+
+/** Normalize a slug to its name-base (drops the random uniqueness suffix). */
+export function slugBase(slug: string): string {
+  return slug.replace(/-[a-z0-9]{2,8}$/, "");
+}
+
+/** The name-base a skill would slugify to (for matching firings to skills). */
+export function nameSlugBase(name: string): string {
+  return (
+    name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 40) || "skill"
+  );
 }
 
 function slugify(name: string): string {
@@ -92,20 +119,20 @@ export async function registerSkill(params: {
   name: string;
   description: string;
   instructions: string;
-}): Promise<{ skillId: string; skillVersion: string }> {
+}): Promise<{ skillId: string; skillVersion: string; slug: string }> {
   const slug = slugify(params.name);
   const skillMd = `---\nname: ${slug}\ndescription: ${params.description.replace(/\n/g, " ")}\n---\n\n${params.instructions}\n`;
   const created = await beta.skills.create({
     files: [await toFile(Buffer.from(skillMd), `${slug}/SKILL.md`)],
   });
-  return { skillId: created.id, skillVersion: String(created.latest_version ?? "1") };
+  return { skillId: created.id, skillVersion: String(created.latest_version ?? "1"), slug };
 }
 
 /** Register a NEW VERSION of an existing skill (in-place update). */
 export async function registerSkillVersion(
   skillId: string,
   params: { name: string; description: string; instructions: string },
-): Promise<{ skillVersion: string }> {
+): Promise<{ skillVersion: string; slug: string }> {
   // The SKILL.md `name` (and directory) must be IDENTICAL across all versions of
   // a skill, so reuse the existing skill's slug rather than minting a new one.
   let slug = slugify(params.name);
@@ -119,7 +146,7 @@ export async function registerSkillVersion(
   const created = await beta.skills.versions.create(skillId, {
     files: [await toFile(Buffer.from(skillMd), `${slug}/SKILL.md`)],
   });
-  return { skillVersion: String(created.version ?? created.latest_version ?? "1") };
+  return { skillVersion: String(created.version ?? created.latest_version ?? "1"), slug };
 }
 
 /** Best-effort delete of a registered skill (all versions first, then the skill). */

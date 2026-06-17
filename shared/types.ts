@@ -130,6 +130,11 @@ export interface Skill {
   /** Official Skills API id + version, once registered (user skills only). */
   skillId?: string;
   skillVersion?: string;
+  /** Registered SKILL.md directory slug — used to detect when this skill fires
+   * (the model reads `/skills/<slug>/SKILL.md`). */
+  slug?: string;
+  /** Times this skill has actually fired (loaded) in a response. */
+  fireCount?: number;
 }
 
 // ---- Profiles (seeded demo personae) ----
@@ -171,6 +176,8 @@ export interface ChatRequest {
 export interface ChatMeta {
   banner?: SkillCueBanner;
   appliedSkillIds: string[];
+  /** Dev-only trace id for this turn (see server/trace.ts; logged client-side). */
+  traceId?: string;
 }
 
 export interface ExtractRequest {

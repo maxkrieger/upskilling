@@ -7,15 +7,18 @@ import { ENV } from "./env.ts";
 import { jsonCall, streamChat } from "./anthropic.ts";
 import { decideCue } from "./cue.ts";
 import { reportError } from "./discord.ts";
+import { startTrace } from "./trace.ts";
 import {
   CODE_EXECUTION_TOOL,
   CREATE_SKILL_TOOL,
   deleteSkillRemote,
   getSkillCreatorRef,
+  nameSlugBase,
   registerSkill,
   registerSkillVersion,
   skillContainer,
   SKILLS_BETAS,
+  slugBase,
   UPDATE_SKILL_TOOL,
 } from "./skills.ts";
 import {
@@ -100,6 +103,12 @@ app.post("/api/auth", async (c) => {
 app.post("/api/chat", async (c) => {
   const body = await c.req.json<ChatRequest>();
   const lastUser = [...(body.messages ?? [])].reverse().find((m) => m.role === "user");
+  const tr = startTrace("chat");
+  tr.log("request", {
+    profile: body.profileId,
+    lastUser: lastUser?.content,
+    enabledSkills: (body.skills ?? []).filter((s) => s.enabled).map((s) => s.name),
+  });
 
   // Run the cueing decider (stateless) before the response. Skipped when snoozed.
   let cueInstruction: string | undefined;
@@ -110,6 +119,7 @@ app.post("/api/chat", async (c) => {
       workflowIndex: body.workflowIndex ?? [],
       skills: body.skills ?? [],
     });
+    tr.log("cue.decision", decision);
     if (decision.shouldCue && decision.kind === "update" && decision.targetSkillId) {
       const sk = (body.skills ?? []).find((s) => s.id === decision.targetSkillId);
       cueInstruction = updateOperatorNote({
@@ -146,11 +156,10 @@ app.post("/api/chat", async (c) => {
 
   const meta: ChatMeta = {
     banner,
-    // Only skills actually attached to the request (registered + enabled) — not
-    // the builtin skill-creator, which is never sent to the model.
-    appliedSkillIds: (body.skills ?? [])
-      .filter((s) => s.enabled && s.skillId)
-      .map((s) => s.id),
+    // Actual firings are detected during streaming and sent via an `applied`
+    // event — start empty rather than guessing from the enabled set.
+    appliedSkillIds: [],
+    traceId: tr.id,
   };
 
   // Build the message history. Deliver any cue as a mid-conversation system
@@ -161,7 +170,7 @@ app.post("/api/chat", async (c) => {
   // Always mount the skill-creator (authoring methodology) plus the user's
   // enabled, registered skills (so they trigger natively). The model persists
   // new/updated skills by calling create_skill / update_skill.
-  let creatorRef: { skill_id: string; version: string } | undefined;
+  let creatorRef: { skill_id: string; version: string; slug: string } | undefined;
   try {
     creatorRef = await getSkillCreatorRef();
   } catch (err) {
@@ -170,6 +179,20 @@ app.post("/api/chat", async (c) => {
   }
   const container = skillContainer(body.skills ?? [], creatorRef);
   const tools: any[] = [CODE_EXECUTION_TOOL, CREATE_SKILL_TOOL, UPDATE_SKILL_TOOL];
+
+  // Map a fired skill's directory slug back to a local skill id, so the UI can
+  // show which skills actually fired. Prefer the exact stored slug; fall back to
+  // matching the slug's name-base (for skills registered before slugs were kept).
+  const slugToLocalId = new Map<string, string>();
+  const baseToLocalId = new Map<string, string>();
+  if (creatorRef?.slug) slugToLocalId.set(creatorRef.slug, "skill_creator_builtin");
+  baseToLocalId.set("skill-creator", "skill_creator_builtin");
+  for (const s of body.skills ?? []) {
+    if (!s.skillId) continue;
+    if (s.slug) slugToLocalId.set(s.slug, s.id);
+    baseToLocalId.set(nameSlugBase(s.name), s.id);
+  }
+  const firedIds = new Set<string>();
 
   if (cueInstruction) {
     messages.push({ role: "system", content: cueInstruction });
@@ -181,8 +204,11 @@ app.post("/api/chat", async (c) => {
     profileRole: body.profileRole ?? "",
   });
 
+  tr.log("attached", { container, tools: tools.map((t: any) => t.name), betas, operatorNote: !!cueInstruction });
+
   return streamSSE(c, async (stream) => {
     await stream.writeSSE({ event: "meta", data: JSON.stringify(meta) });
+    let fullText = "";
     try {
       await streamChat({
         system,
@@ -193,11 +219,20 @@ app.post("/api/chat", async (c) => {
         betas,
         handlers: {
           onText: (delta) => {
+            fullText += delta;
             void stream.writeSSE({ event: "delta", data: JSON.stringify({ text: delta }) });
+          },
+          // A mounted skill was loaded (it fired) — map its slug to a local id.
+          onSkillFired: (slug) => {
+            const localId = slugToLocalId.get(slug) ?? baseToLocalId.get(slugBase(slug));
+            tr.log("skill.fired", { slug, mappedTo: localId ?? "(unmapped)" });
+            if (localId) firedIds.add(localId);
           },
           // The model persists skills by calling these tools; we register with
           // the Skills API and push the saved skill to the client (localStorage).
           onToolUse: async (name, input) => {
+            tr.log("tool.call", { name, skillName: input?.name });
+            tr.log("text.before-tool", fullText);
             try {
               if (name === "create_skill") {
                 const reg = await registerSkill(input);
@@ -212,7 +247,9 @@ app.post("/api/chat", async (c) => {
                   skillId: reg.skillId,
                   skillVersion: reg.skillVersion,
                 };
+                skill.slug = reg.slug;
                 await stream.writeSSE({ event: "skill", data: JSON.stringify({ skill, kind: "create" }) });
+                tr.log("tool.created", { localId: skill.id, skillId: reg.skillId, slug: reg.slug, name: skill.name });
                 return `Saved. The "${input.name}" skill is now active and will apply automatically next time.`;
               }
               if (name === "update_skill") {
@@ -220,6 +257,7 @@ app.post("/api/chat", async (c) => {
                   (s) => s.skillId && s.name.toLowerCase() === String(input.name).toLowerCase(),
                 );
                 if (!target?.skillId) {
+                  tr.log("tool.update-no-match", { name: input?.name });
                   return `No existing skill named "${input.name}" was found — call create_skill to make a new one instead.`;
                 }
                 const reg = await registerSkillVersion(target.skillId, input);
@@ -233,19 +271,26 @@ app.post("/api/chat", async (c) => {
                   event: "skill",
                   data: JSON.stringify({ skill, kind: "update", replacesLocalId: target.id }),
                 });
+                tr.log("tool.updated", { localId: target.id, skillId: target.skillId, version: reg.skillVersion });
                 return `Updated the "${input.name}" skill.`;
               }
               return `Unknown tool: ${name}`;
             } catch (e) {
               console.error(`[chat] ${name} failed:`, e);
+              tr.log("tool.error", { name, message: (e as Error).message });
               void reportError(e, { source: `POST /api/chat (${name})` });
               return `Failed to save the skill: ${(e as Error).message}`;
             }
           },
         },
       });
+      // Report which skills actually fired so the client can mark them + count.
+      await stream.writeSSE({ event: "applied", data: JSON.stringify({ ids: [...firedIds] }) });
+      tr.log("applied", [...firedIds]);
+      tr.log("text.final", fullText);
     } catch (err) {
       console.error("[chat] stream error:", err);
+      tr.log("stream.error", { message: (err as Error).message });
       void reportError(err, { source: "POST /api/chat (stream)", details: { profile: body.profileId } });
       await stream.writeSSE({
         event: "error",
@@ -253,6 +298,7 @@ app.post("/api/chat", async (c) => {
       });
     }
     await stream.writeSSE({ event: "done", data: "{}" });
+    await tr.end();
   });
 });
 
