@@ -68,7 +68,7 @@ export function MessageView({
           <ThinkingGlyph fixedWidth={false} className="align-middle text-accent" />
         )}
 
-        {message.banner && (
+        {message.banner && !streaming && (
           <SkillBanner
             banner={message.banner}
             conversationId={conversationId}

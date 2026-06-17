@@ -76,14 +76,17 @@ export function SkillBanner({
 
   return (
     <div
-      onAnimationEnd={
-        dismissing ? () => dismissCue(conversationId, messageId) : undefined
-      }
-      className={`mt-3 rounded-2xl border border-border bg-surface p-4 shadow-sm ${
-        dismissing ? "animate-collapse-away overflow-hidden" : "animate-rise-in"
+      onTransitionEnd={(e) => {
+        if (dismissing && e.propertyName === "grid-template-rows")
+          dismissCue(conversationId, messageId);
+      }}
+      className={`grid transition-all duration-300 ease-in ${
+        dismissing ? "mt-0 grid-rows-[0fr] opacity-0" : "mt-3 grid-rows-[1fr] opacity-100"
       }`}
     >
-      <div className="flex items-center gap-3">
+      <div className="overflow-hidden">
+        <div className="animate-rise-in rounded-2xl border border-border bg-surface p-4 shadow-sm">
+          <div className="flex items-center gap-3">
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-peach text-accent">
           <BookOpen size={20} />
         </div>
@@ -116,6 +119,8 @@ export function SkillBanner({
           >
             {isUpdate ? "Update Skill" : "Create Skill"}
           </button>
+          </div>
+          </div>
         </div>
       </div>
     </div>
