@@ -189,7 +189,8 @@ export function buildExtractUser(params: {
 }): string {
   return `Extract a workflow summary from this conversation. Highlight the reusable, workflow-able aspects with direct user quotes. If it is a one-off or personal/Q&A chat, set isWorkflow=false.
 
-Reuse one of these existing cluster labels if this conversation is the same kind of workflow: ${params.existingClusters.join(", ") || "(none yet)"}.
+Existing cluster labels: ${params.existingClusters.join(", ") || "(none yet)"}.
+If this conversation is the same KIND of workflow as one of those, you MUST return that existing label VERBATIM (exact characters) — do not invent a near-synonym or change capitalization/punctuation. Only mint a new kebab-case label when it's a genuinely different workflow.
 
 ## Conversation
 ${params.conversationText}`;

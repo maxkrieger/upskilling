@@ -186,11 +186,13 @@ app.post("/api/chat", async (c) => {
   const slugToLocalId = new Map<string, string>();
   const baseToLocalId = new Map<string, string>();
   if (creatorRef?.slug) slugToLocalId.set(creatorRef.slug, "skill_creator_builtin");
-  baseToLocalId.set("skill-creator", "skill_creator_builtin");
   for (const s of body.skills ?? []) {
-    if (!s.skillId) continue;
+    if (!s.enabled || !s.skillId) continue; // only mounted skills can fire
     if (s.slug) slugToLocalId.set(s.slug, s.id);
-    baseToLocalId.set(nameSlugBase(s.name), s.id);
+    // First-writer wins on the name-base fallback so a name collision doesn't
+    // silently re-point an existing base key to a different skill.
+    const base = nameSlugBase(s.name);
+    if (!baseToLocalId.has(base)) baseToLocalId.set(base, s.id);
   }
   const firedIds = new Set<string>();
 
@@ -223,10 +225,13 @@ app.post("/api/chat", async (c) => {
             void stream.writeSSE({ event: "delta", data: JSON.stringify({ text: delta }) });
           },
           // A mounted skill was loaded (it fired) — map its slug to a local id.
+          // The skill-creator fires on every authoring turn (its tool descriptions
+          // require consulting it), so it's traced but excluded from the user-facing
+          // "applied" set / fire counts — it's infrastructure, not the user's skill.
           onSkillFired: (slug) => {
             const localId = slugToLocalId.get(slug) ?? baseToLocalId.get(slugBase(slug));
             tr.log("skill.fired", { slug, mappedTo: localId ?? "(unmapped)" });
-            if (localId) firedIds.add(localId);
+            if (localId && localId !== "skill_creator_builtin") firedIds.add(localId);
           },
           // The model persists skills by calling these tools; we register with
           // the Skills API and push the saved skill to the client (localStorage).
@@ -284,9 +289,6 @@ app.post("/api/chat", async (c) => {
           },
         },
       });
-      // Report which skills actually fired so the client can mark them + count.
-      await stream.writeSSE({ event: "applied", data: JSON.stringify({ ids: [...firedIds] }) });
-      tr.log("applied", [...firedIds]);
       tr.log("text.final", fullText);
     } catch (err) {
       console.error("[chat] stream error:", err);
@@ -297,6 +299,10 @@ app.post("/api/chat", async (c) => {
         data: JSON.stringify({ message: (err as Error).message }),
       });
     }
+    // Always report which skills fired — even if the stream errored partway,
+    // skills that already loaded should still be marked + counted.
+    await stream.writeSSE({ event: "applied", data: JSON.stringify({ ids: [...firedIds] }) });
+    tr.log("applied", [...firedIds]);
     await stream.writeSSE({ event: "done", data: "{}" });
     await tr.end();
   });

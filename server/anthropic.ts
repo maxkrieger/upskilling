@@ -84,6 +84,9 @@ export async function streamChat(params: {
   let full = "";
   const messages = [...params.messages];
   const useBeta = !!params.container || (params.betas?.length ?? 0) > 0;
+  // First turn mounts the skills; later turns reuse the warm container by id so
+  // skills aren't cold-remounted (and workspace state survives) each round-trip.
+  let container = params.container;
 
   // Bounded loop so a client tool_use can be handled and the model can resume.
   for (let turn = 0; turn < 5; turn++) {
@@ -96,7 +99,7 @@ export async function streamChat(params: {
     const stream = useBeta
       ? (anthropic.beta.messages.stream as any)({
           ...base,
-          ...(params.container ? { container: params.container } : {}),
+          ...(container ? { container } : {}),
           ...(params.tools ? { tools: params.tools } : {}),
           betas: params.betas,
         })
@@ -108,6 +111,8 @@ export async function streamChat(params: {
     });
 
     const finalMsg: any = await stream.finalMessage();
+    // Reuse the same (warm) container on continuation turns via its id.
+    if (finalMsg.container?.id) container = { id: finalMsg.container.id };
 
     // Detect skill firings: the model reads `/skills/<slug>/…` when it loads a
     // mounted skill (progressive disclosure). Surface each slug to the caller.

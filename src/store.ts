@@ -7,10 +7,10 @@ import type {
   Message,
   Skill,
   WorkflowSet,
-  WorkflowSummary,
 } from "../shared/types.ts";
 import { getProfile, PROFILES } from "./data/index.ts";
 import { BUILTIN_SKILLS } from "./data/builtinSkills.ts";
+import { upsertSummary } from "../shared/workflow.ts";
 import {
   deleteSkillRemote,
   extractWorkflow,
@@ -53,7 +53,11 @@ interface State {
   setView: (v: View) => void;
   openConversation: (id: string | null) => void;
   newConversation: () => void;
-  sendMessage: (text: string, attachments?: Attachment[]) => Promise<void>;
+  sendMessage: (
+    text: string,
+    attachments?: Attachment[],
+    opts?: { resolveBannerMessageId?: string },
+  ) => Promise<void>;
   acceptCue: (conversationId: string, messageId: string) => Promise<void>;
   acceptUpdate: (conversationId: string, messageId: string) => Promise<void>;
   dismissCue: (conversationId: string, messageId: string) => void;
@@ -70,7 +74,11 @@ function mergeConversations(profileId: string, userConvos: Conversation[]): Conv
   const seeded = getProfile(profileId)?.conversations ?? [];
   const userIds = new Set(userConvos.map((c) => c.id));
   const merged = [...userConvos, ...seeded.filter((c) => !userIds.has(c.id))];
-  return merged.sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
+  // Newest first, with a stable id tiebreaker so equal timestamps (multiple
+  // updates in the same ms) don't reorder between renders.
+  return merged.sort((a, b) =>
+    a.updatedAt < b.updatedAt ? 1 : a.updatedAt > b.updatedAt ? -1 : a.id < b.id ? 1 : -1,
+  );
 }
 
 export const useStore = create<State>()(
@@ -93,10 +101,7 @@ export const useStore = create<State>()(
           get().userConversations[profileId ?? get().activeProfileId] ?? [],
         ),
 
-      index: (profileId) => {
-        const pid = profileId ?? get().activeProfileId;
-        return get().indexOverrides[pid] ?? getProfile(pid)?.workflowIndex ?? [];
-      },
+      index: (profileId) => getIndexBase(get, profileId ?? get().activeProfileId),
 
       skillsOf: (profileId) => {
         const pid = profileId ?? get().activeProfileId;
@@ -121,7 +126,7 @@ export const useStore = create<State>()(
       newConversation: () => set({ activeConversationId: null, view: "chat" }),
 
       // ---- Sending a message (creates/promotes a user conversation) ----
-      sendMessage: async (text, attachments) => {
+      sendMessage: async (text, attachments, opts) => {
         const state = get();
         const profile = getProfile(state.activeProfileId);
         if (!profile || state.sending) return;
@@ -238,9 +243,13 @@ export const useStore = create<State>()(
               let setId: string | undefined;
               let setKind: string | undefined;
               writeConvos((c) => {
+                // Prefer the exact banner whose button was pressed; otherwise the
+                // most recent pending one (freeform "make the skill" with no button).
+                const targetId = opts?.resolveBannerMessageId;
                 for (let i = c.messages.length - 1; i >= 0; i--) {
                   const b = c.messages[i].banner;
-                  if (b?.status === "pending") {
+                  const match = targetId ? c.messages[i].id === targetId : b?.status === "pending";
+                  if (b && match) {
                     setId = b.workflowSetId;
                     setKind = b.kind;
                     c.messages[i] = { ...c.messages[i], banner: { ...b, status: "accepted" } };
@@ -291,7 +300,9 @@ export const useStore = create<State>()(
       acceptCue: async (conversationId, messageId) => {
         if (get().sending) return;
         if (get().activeConversationId !== conversationId) set({ activeConversationId: conversationId });
-        await get().sendMessage("Yes — go ahead and capture that workflow as a Skill.");
+        await get().sendMessage("Yes — go ahead and capture that workflow as a Skill.", undefined, {
+          resolveBannerMessageId: messageId,
+        });
       },
 
       // ---- Accept an update cue (button): same flow, naming the target skill so
@@ -309,6 +320,8 @@ export const useStore = create<State>()(
         if (get().activeConversationId !== conversationId) set({ activeConversationId: conversationId });
         await get().sendMessage(
           `Yes — please fold that into my "${target?.name ?? "skill"}" skill.`,
+          undefined,
+          { resolveBannerMessageId: messageId },
         );
       },
 
@@ -464,10 +477,10 @@ function updateMessageBanner(
 }
 
 function getIndexBase(get: Get, pid: string): WorkflowSet[] {
-  return (
-    get().indexOverrides[pid] ??
-    (getProfile(pid)?.workflowIndex ?? []).map((s) => ({ ...s, members: [...s.members] }))
-  );
+  // Always return fresh copies (sets + members) so callers can mutate without
+  // corrupting the bundled seed or the persisted override array.
+  const src = get().indexOverrides[pid] ?? getProfile(pid)?.workflowIndex ?? [];
+  return src.map((s) => ({ ...s, members: [...s.members] }));
 }
 
 function updateIndexSet(
@@ -499,25 +512,11 @@ async function refreshIndexForConversation(
       existingIndex: get().index(pid),
     });
     if (!res.isWorkflow || !res.summary) return;
-    const summary: WorkflowSummary = res.summary;
 
-    const base = getIndexBase(get, pid).map((s) => ({ ...s, members: [...s.members] }));
-    let target = base.find((s) => s.cluster === summary.cluster);
-    if (!target) {
-      target = {
-        id: uid("ws"),
-        cluster: summary.cluster,
-        members: [],
-        cueStatus: "none",
-        updatedAt: now(),
-      };
-      base.unshift(target);
-    }
-    // Overwrite this conversation's member (one per conversation).
-    target.members = target.members.filter((m) => m.conversationId !== conversationId);
-    target.members.unshift(summary);
-    target.updatedAt = now();
-    set((s) => ({ indexOverrides: { ...s.indexOverrides, [pid]: base } }));
+    // Join by membership first (survives cluster-label drift, preserves an
+    // accepted/rejected set's status), then normalized cluster, then new set.
+    const next = upsertSummary(getIndexBase(get, pid), res.summary, conversationId, () => uid("ws"), now());
+    set((s) => ({ indexOverrides: { ...s.indexOverrides, [pid]: next } }));
   } catch {
     /* extraction is best-effort */
   }

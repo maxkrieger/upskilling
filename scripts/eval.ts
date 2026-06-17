@@ -32,8 +32,63 @@ import {
 } from "../server/skills.ts";
 import { toAnthropicMessages } from "../server/util.ts";
 import { getProfile } from "../src/data/index.ts";
-import type { Attachment, PresetPrompt, Profile, Skill } from "../shared/types.ts";
+import type { Attachment, PresetPrompt, Profile, Skill, WorkflowSet } from "../shared/types.ts";
+import { normalizeCluster, upsertSummary } from "../shared/workflow.ts";
 import { CUE_CASES } from "./eval-cases.ts";
+
+/**
+ * Deterministic guard for the cluster-drift re-cue bug: re-extracting a workflow
+ * (even with a drifted cluster label) must NOT fork a new "none" set and re-cue
+ * a skill the user already created. Pure logic — no API calls.
+ */
+function evalIndexUpsert() {
+  console.log("\n=== Index upsert (cluster-drift re-cue guard) ===");
+  const member = (conversationId: string, cluster: string) => ({ conversationId, cluster, summary: "s", quotes: [] });
+  const accepted = (): WorkflowSet[] => [
+    {
+      id: "X",
+      cluster: "deck-bar-charts",
+      cueStatus: "accepted",
+      skillId: "sk_x",
+      members: [member("cA", "deck-bar-charts")],
+      updatedAt: "t",
+    },
+  ];
+  const newId = () => "ws_new";
+  const checks: Array<[string, boolean]> = [];
+
+  // A) Re-extracting the same conversation with a drifted label stays in the
+  //    accepted set (membership join) — no new set, status preserved.
+  const a = upsertSummary(accepted(), member("cA", "Deck Bar Charts"), "cA", newId, "t2");
+  checks.push([
+    "re-extraction drift stays in the accepted set",
+    a.length === 1 && a[0].cueStatus === "accepted" && a[0].skillId === "sk_x" &&
+      a[0].members.filter((m) => m.conversationId === "cA").length === 1,
+  ]);
+
+  // B) A NEW conversation with case/punctuation drift joins via normalized cluster.
+  const b = upsertSummary(accepted(), member("cB", "deck_bar_charts"), "cB", newId, "t2");
+  checks.push([
+    "normalized cluster joins accepted set (no new 'none' set)",
+    b.length === 1 && b[0].cueStatus === "accepted" &&
+      b[0].members.some((m) => m.conversationId === "cB") && b[0].members.some((m) => m.conversationId === "cA"),
+  ]);
+
+  // C) A genuinely different workflow makes a fresh "none" set.
+  const c = upsertSummary(accepted(), member("cC", "weekly-summary"), "cC", newId, "t2");
+  const fresh = c.find((s) => s.id === "ws_new");
+  checks.push(["genuinely new workflow creates a 'none' set", c.length === 2 && fresh?.cueStatus === "none"]);
+
+  checks.push(["normalizeCluster collapses case/punctuation", normalizeCluster("Deck_Bar Charts!") === "deck-bar-charts"]);
+
+  let pass = 0;
+  for (const [name, ok] of checks) {
+    console.log(`  ${ok ? "✓" : "✗"} ${name}`);
+    if (ok) pass++;
+  }
+  if (pass < checks.length) throw new Error(`index-upsert regression: ${pass}/${checks.length} passed`);
+  return { pass, total: checks.length };
+}
 
 /** Resolve a preset's attachmentRefs against the profile's shared assets. */
 function resolveAtts(profile: Profile, preset: PresetPrompt): Attachment[] {
@@ -341,13 +396,14 @@ async function evalLifecycle() {
 }
 
 async function main() {
+  const indexUpsert = evalIndexUpsert(); // fast, deterministic — fail early
   const cueing = await evalCueing();
   const quality = await evalSkillQuality();
   const lifecycle = await evalLifecycle();
   await mkdir("eval-results", { recursive: true });
   await writeFile(
     "eval-results/eval.json",
-    JSON.stringify({ cueing, quality, lifecycle, at: new Date().toISOString() }, null, 2),
+    JSON.stringify({ indexUpsert, cueing, quality, lifecycle, at: new Date().toISOString() }, null, 2),
   );
   console.log("\nWrote eval-results/eval.json");
 }
