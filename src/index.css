@@ -10,7 +10,9 @@ body,
 
 body {
   margin: 0;
-  background: theme(colors.canvas);
+  /* Detail/content pane is the recessed (darker) surface; the sidebar "master"
+     is the lighter, raised surface that shadows over it. */
+  background: theme(colors.sand);
   color: theme(colors.ink);
   font-family: theme(fontFamily.sans);
   -webkit-font-smoothing: antialiased;

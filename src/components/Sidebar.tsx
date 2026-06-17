@@ -53,7 +53,7 @@ export function Sidebar() {
   const enabledCount = skills.filter((s) => s.enabled).length;
 
   return (
-    <aside className="flex h-full w-72 shrink-0 flex-col border-r border-border bg-sand">
+    <aside className="relative z-10 flex h-full w-72 shrink-0 flex-col bg-canvas shadow-[6px_0_24px_-8px_rgba(41,37,31,0.14)]">
       {/* Profile selector (shadcn, non-native) */}
       <div className="border-b border-border p-3">
         <label className="mb-1 block text-xs uppercase tracking-wide text-faint">

@@ -71,8 +71,8 @@ export function CustomizeView() {
 
   return (
     <div className="flex h-full">
-      {/* ---- List pane ---- */}
-      <div className="flex w-72 shrink-0 flex-col border-r border-border">
+      {/* ---- List pane (master): lighter, raised, shadows over the detail ---- */}
+      <div className="relative z-10 flex w-72 shrink-0 flex-col bg-canvas shadow-[6px_0_24px_-8px_rgba(41,37,31,0.14)]">
         <div className="flex items-center justify-between gap-2 px-4 py-3">
           <h2 className="text-lg font-medium text-ink">Skills</h2>
           <div className="flex items-center gap-1 text-faint">
