@@ -38,7 +38,15 @@ export async function registerSkillVersion(
   skillId: string,
   params: { name: string; description: string; instructions: string },
 ): Promise<{ skillVersion: string }> {
-  const slug = slugify(params.name);
+  // The SKILL.md `name` (and directory) must be IDENTICAL across all versions of
+  // a skill, so reuse the existing skill's slug rather than minting a new one.
+  let slug = slugify(params.name);
+  try {
+    const existing = await beta.skills.retrieve(skillId);
+    if (existing?.display_title) slug = existing.display_title;
+  } catch {
+    /* fall back to a fresh slug */
+  }
   const skillMd = `---\nname: ${slug}\ndescription: ${params.description.replace(/\n/g, " ")}\n---\n\n${params.instructions}\n`;
   const created = await beta.skills.versions.create(skillId, {
     files: [await toFile(Buffer.from(skillMd), `${slug}/SKILL.md`)],

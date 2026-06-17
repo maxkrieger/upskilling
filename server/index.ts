@@ -308,10 +308,17 @@ app.post("/api/skills/update", async (c) => {
 
   return streamSSE(c, async (stream) => {
     try {
-      // Phase 1: narrate the update as a chat turn.
+      // Phase 1: narrate the update as a chat turn. Use a short CONTEXT-only
+      // prompt here (not `user`, which instructs returning the full SKILL.md and
+      // would leak the raw frontmatter into the chat).
       await streamChat({
         system: buildSkillUpdateNarrationSystem(),
-        messages: [{ role: "user", content: user }],
+        messages: [
+          {
+            role: "user",
+            content: `Fold a new standing preference into the user's existing "${body.skill.name}" skill: ${body.newCriterion}.`,
+          },
+        ],
         model: ENV.MODEL_MAIN,
         maxTokens: 500,
         handlers: {

@@ -65,7 +65,7 @@ export function MessageView({
           </div>
         ) : null}
         {streaming && message.content && (
-          <ThinkingGlyph className="ml-1 align-middle text-accent" />
+          <ThinkingGlyph fixedWidth={false} className="align-middle text-accent" />
         )}
 
         {message.banner && (
