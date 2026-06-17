@@ -3,7 +3,12 @@ import { anthropic } from "./anthropic.ts";
 import { SKILL_CREATOR_MD } from "./generated/skillCreator.ts";
 import type { Skill } from "../shared/types.ts";
 
-const beta = anthropic.beta as any;
+// Lazy `beta` accessor: resolves the real client on each access (at REQUEST
+// time), never at module load. A bare `const beta = anthropic.beta` would fire
+// the client proxy during import — before the per-request env bridge populates
+// process.env on Workers — building (and memoizing) a keyless client, so every
+// API call would then fail with "Could not resolve authentication method".
+const beta: any = new Proxy({}, { get: (_t, p) => (anthropic.beta as any)[p] });
 
 /** Betas + tool required to attach Skills to a Messages API request:
  * code execution (required for Skills), the Skills API, and the Files API

@@ -5,14 +5,18 @@ import { ENV } from "./env.ts";
 // load — on the Workers runtime env bindings aren't available at module scope.
 let _client: Anthropic | null = null;
 function getClient(): Anthropic {
-  if (!_client) {
-    _client = new Anthropic({
-      apiKey: ENV.ANTHROPIC_API_KEY,
-      // The demo org has a low concurrent-connection limit; retry 429s patiently.
-      maxRetries: 6,
-    });
-  }
-  return _client;
+  if (_client) return _client;
+  const apiKey = ENV.ANTHROPIC_API_KEY;
+  const client = new Anthropic({
+    apiKey,
+    // The demo org has a low concurrent-connection limit; retry 429s patiently.
+    maxRetries: 6,
+  });
+  // Only memoize a properly-keyed client. On Workers, env bindings aren't present
+  // at module scope, so an accidental early construction would otherwise cache a
+  // keyless client forever (all later requests failing even once the key exists).
+  if (apiKey) _client = client;
+  return client;
 }
 
 /** Lazy proxy: `anthropic.beta.messages…` resolves the real client on first access. */
