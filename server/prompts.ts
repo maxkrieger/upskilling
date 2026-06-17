@@ -228,48 +228,6 @@ You are applying the skill-creator above, in the "just vibe with me" one-shot pa
 Apply the Skill Writing Guide above. One critical reminder, since the evidence quotes the user restating their preferences: those preferences (colors, formatting, do's and don'ts) are the skill's BEHAVIOR — defaults it applies automatically — they are NOT triggers. The description must trigger on the underlying task/context ("a bar chart for a deck", "an NDA review") so the skill fires even when the user no longer mentions any preference. Never phrase the trigger as the user repeating preferences ("same as always", "no gridlines"); the entire point is that they no longer have to say those.`;
 }
 
-/**
- * Conversational system prompt for the streamed skill-creator narration, shown
- * as a chat turn while the skill is being authored. Prose only — the structured
- * SKILL.md is produced by a second, schema-constrained call.
- */
-export function buildSkillNarrationSystem(): string {
-  return `You are the skill-creator, walking the user through capturing their repeated workflow as a reusable Skill, in a friendly first-person chat voice.
-
-Write a short message (about 4-6 sentences, light markdown):
-1. Confirm you're creating the Skill and name it.
-2. Call out the SPECIFIC, verbatim preferences you noticed repeated across their conversations (e.g. exact colors, formats, do's and don'ts) — be concrete, quoting their own words.
-3. Explain briefly how it'll work next time: a short request will auto-apply these preferences.
-
-Do not output code blocks, JSON, or a SKILL.md — just the conversational explanation. End on a confident note that the Skill is ready.`;
-}
-
-/** Conversational narration shown while an existing skill is updated in-chat. */
-export function buildSkillUpdateNarrationSystem(): string {
-  return `You are the skill-creator, updating an EXISTING skill the user already has, in a friendly first-person chat voice. Write 2-4 short sentences: confirm you're folding the new preference into the existing skill (name it), state the new criterion concretely (quote the user), and note it now applies automatically alongside what the skill already did. No code blocks or JSON.`;
-}
-
-/** Produce an updated SKILL.md that folds a new criterion into an existing skill. */
-export function buildSkillUpdateUser(params: {
-  skill: { name: string; description: string; instructions: string };
-  newCriterion: string;
-  conversationText: string;
-}): string {
-  return `Update the existing Skill below by folding in a NEW standing preference the user just expressed. Keep everything the skill already does and ADD the new criterion as another automatic default. Keep the same name. Keep the description triggering on the task (not on restating preferences). Return the full updated name, description, and instructions.
-
-## New preference to add
-${params.newCriterion}
-
-## Existing skill
-name: ${params.skill.name}
-description: ${params.skill.description}
-instructions:
-${params.skill.instructions}
-
-## Recent conversation (context)
-${params.conversationText}`;
-}
-
 export function buildSkillCreatorUser(params: {
   workflowSet: WorkflowSet;
   conversations: Conversation[];

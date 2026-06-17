@@ -15,9 +15,10 @@ function parseSkillMd(md: string): { description: string; body: string } {
 const parsed = parseSkillMd(skillCreatorMd);
 
 /**
- * The skill-creator skill ships with every profile and is what the "create
- * skill" flow invokes (see server /api/skills/create). It is never removable.
- * Its description + instructions are the real SKILL.md, embedded verbatim.
+ * The skill-creator skill ships with every profile. It's mounted into the chat
+ * container so the model can author skills (persisted via the create_skill /
+ * update_skill tools — see server /api/chat). It is never removable. Its
+ * description + instructions are the real SKILL.md, embedded verbatim.
  */
 export const SKILL_CREATOR: Skill = {
   id: "skill_creator_builtin",

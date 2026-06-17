@@ -1,11 +1,8 @@
 import type {
   ChatMeta,
   ChatRequest,
-  CreateSkillRequest,
-  CreateSkillResponse,
   ExtractRequest,
   Skill,
-  UpdateSkillRequest,
   WorkflowSummary,
 } from "../shared/types.ts";
 
@@ -129,71 +126,3 @@ export async function deleteSkillRemote(skillId: string): Promise<void> {
   }
 }
 
-export interface CreateSkillStreamHandlers {
-  onDelta?: (text: string) => void;
-  onSkill?: (skill: Skill) => void;
-  onError?: (message: string) => void;
-  onDone?: () => void;
-}
-
-/** Shared SSE parser for the create/update skill streams (delta + skill events). */
-async function streamSkillEndpoint(
-  path: string,
-  body: unknown,
-  handlers: CreateSkillStreamHandlers,
-): Promise<void> {
-  const res = await fetch(path, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok || !res.body) {
-    handlers.onError?.(`skill request failed (${res.status})`);
-    return;
-  }
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    let sep: number;
-    while ((sep = buffer.indexOf("\n\n")) !== -1) {
-      const raw = buffer.slice(0, sep);
-      buffer = buffer.slice(sep + 2);
-      let event = "message";
-      let data = "";
-      for (const line of raw.split("\n")) {
-        if (line.startsWith("event:")) event = line.slice(6).trim();
-        else if (line.startsWith("data:")) data += line.slice(5).trim();
-      }
-      if (!data) continue;
-      try {
-        const parsed = JSON.parse(data);
-        if (event === "delta") handlers.onDelta?.((parsed as { text: string }).text);
-        else if (event === "skill") handlers.onSkill?.((parsed as CreateSkillResponse).skill);
-        else if (event === "error") handlers.onError?.((parsed as { message: string }).message);
-      } catch {
-        /* ignore malformed event */
-      }
-    }
-  }
-  handlers.onDone?.();
-}
-
-/** Stream the skill-creator creating a new skill (narration + final skill). */
-export function streamCreateSkill(
-  req: CreateSkillRequest,
-  handlers: CreateSkillStreamHandlers,
-): Promise<void> {
-  return streamSkillEndpoint("/api/skills/create", req, handlers);
-}
-
-/** Stream the skill-creator updating an existing skill in place (new version). */
-export function streamUpdateSkill(
-  req: UpdateSkillRequest,
-  handlers: CreateSkillStreamHandlers,
-): Promise<void> {
-  return streamSkillEndpoint("/api/skills/update", req, handlers);
-}

@@ -183,16 +183,6 @@ export interface ExtractResponse {
   summary: WorkflowSummary;
 }
 
-export interface CreateSkillRequest {
-  workflowSet: WorkflowSet;
-  /** Sample conversations belonging to the set for grounding. */
-  conversations: Conversation[];
-}
-
-export interface CreateSkillResponse {
-  skill: Skill;
-}
-
 export interface CueDecision {
   shouldCue: boolean;
   kind?: "create" | "update";
@@ -206,13 +196,4 @@ export interface CueDecision {
   trigger?: string;
   /** update: the single new standing preference the user introduced. */
   newCriterion?: string;
-}
-
-export interface UpdateSkillRequest {
-  /** The existing skill to update (carries skillId for versioning). */
-  skill: Skill;
-  /** The new standing preference/criterion to fold in. */
-  newCriterion: string;
-  /** Recent conversation for grounding. */
-  conversation: Pick<Conversation, "messages">;
 }

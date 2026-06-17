@@ -20,26 +20,17 @@ import {
 import {
   buildChatSystem,
   buildExtractUser,
-  buildSkillCreatorSystem,
-  buildSkillCreatorUser,
-  buildSkillNarrationSystem,
-  buildSkillUpdateNarrationSystem,
-  buildSkillUpdateUser,
   cueOperatorNote,
   updateOperatorNote,
   EXTRACT_SCHEMA,
-  SKILL_SCHEMA,
 } from "./prompts.ts";
 import { conversationToText, id, toAnthropicMessages } from "./util.ts";
 import type {
   ChatMeta,
   ChatRequest,
-  CreateSkillRequest,
-  CreateSkillResponse,
   ExtractRequest,
   ExtractResponse,
   Skill,
-  UpdateSkillRequest,
   WorkflowSummary,
 } from "../shared/types.ts";
 
@@ -277,153 +268,6 @@ app.post("/api/extract", async (c) => {
     summary: summary as WorkflowSummary,
   };
   return c.json(resp);
-});
-
-// ---- Create skill: invoke the skill-creator flow over a workflow set. ----
-// Streamed + interactive: first stream a conversational narration of what's
-// being captured, then emit the structured SKILL.md as a `skill` event.
-app.post("/api/skills/create", async (c) => {
-  const body = await c.req.json<CreateSkillRequest>();
-  const user = buildSkillCreatorUser({
-    workflowSet: body.workflowSet,
-    conversations: body.conversations ?? [],
-  });
-
-  return streamSSE(c, async (stream) => {
-    try {
-      // Phase 1: stream the skill-creator's narration as a chat turn.
-      await streamChat({
-        system: buildSkillNarrationSystem(),
-        messages: [{ role: "user", content: user }],
-        model: ENV.MODEL_MAIN,
-        maxTokens: 700,
-        handlers: {
-          onText: (delta) => {
-            void stream.writeSSE({ event: "delta", data: JSON.stringify({ text: delta }) });
-          },
-        },
-      });
-
-      // Phase 2: produce the structured SKILL.md (schema-constrained).
-      const result = await jsonCall<{
-        name: string;
-        description: string;
-        instructions: string;
-      }>({
-        system: buildSkillCreatorSystem(),
-        user,
-        schema: SKILL_SCHEMA as unknown as Record<string, unknown>,
-        model: ENV.MODEL_MAIN,
-        maxTokens: 2000,
-      });
-
-      // Phase 3: register the SKILL.md with the official Skills API so the
-      // agent can load it natively.
-      const registered = await registerSkill({
-        name: result.name,
-        description: result.description,
-        instructions: result.instructions,
-      });
-
-      const skill: Skill = {
-        id: id("skill"),
-        name: result.name,
-        description: result.description,
-        instructions: result.instructions,
-        source: "user",
-        fromWorkflowSetId: body.workflowSet.id,
-        enabled: true,
-        createdAt: new Date().toISOString(),
-        skillId: registered.skillId,
-        skillVersion: registered.skillVersion,
-      };
-      await stream.writeSSE({ event: "skill", data: JSON.stringify({ skill } satisfies CreateSkillResponse) });
-    } catch (err) {
-      console.error("[skills/create] error:", err);
-      void reportError(err, { source: "POST /api/skills/create" });
-      await stream.writeSSE({
-        event: "error",
-        data: JSON.stringify({ message: (err as Error).message }),
-      });
-    }
-    await stream.writeSSE({ event: "done", data: "{}" });
-  });
-});
-
-// ---- Update an existing skill in-chat: fold in a new criterion, register a
-// new version, stream the skill-creator narration. ----
-app.post("/api/skills/update", async (c) => {
-  const body = await c.req.json<UpdateSkillRequest>();
-  const user = buildSkillUpdateUser({
-    skill: {
-      name: body.skill.name,
-      description: body.skill.description,
-      instructions: body.skill.instructions,
-    },
-    newCriterion: body.newCriterion,
-    conversationText: conversationToText(body.conversation),
-  });
-
-  return streamSSE(c, async (stream) => {
-    try {
-      // Phase 1: narrate the update as a chat turn. Use a short CONTEXT-only
-      // prompt here (not `user`, which instructs returning the full SKILL.md and
-      // would leak the raw frontmatter into the chat).
-      await streamChat({
-        system: buildSkillUpdateNarrationSystem(),
-        messages: [
-          {
-            role: "user",
-            content: `Fold a new standing preference into the user's existing "${body.skill.name}" skill: ${body.newCriterion}.`,
-          },
-        ],
-        model: ENV.MODEL_MAIN,
-        maxTokens: 500,
-        handlers: {
-          onText: (delta) => {
-            void stream.writeSSE({ event: "delta", data: JSON.stringify({ text: delta }) });
-          },
-        },
-      });
-
-      // Phase 2: produce the updated SKILL.md.
-      const result = await jsonCall<{ name: string; description: string; instructions: string }>({
-        system: buildSkillCreatorSystem(),
-        user,
-        schema: SKILL_SCHEMA as unknown as Record<string, unknown>,
-        model: ENV.MODEL_MAIN,
-        maxTokens: 2000,
-      });
-
-      // Phase 3: register a new version (or fall back to a new skill).
-      let skillId = body.skill.skillId;
-      let skillVersion = body.skill.skillVersion;
-      try {
-        if (skillId) {
-          ({ skillVersion } = await registerSkillVersion(skillId, result));
-        } else {
-          ({ skillId, skillVersion } = await registerSkill(result));
-        }
-      } catch (e) {
-        console.error("[skills/update] version register failed:", e);
-      }
-
-      const skill: Skill = {
-        ...body.skill,
-        name: result.name,
-        description: result.description,
-        instructions: result.instructions,
-        skillId,
-        skillVersion,
-      };
-      await stream.writeSSE({ event: "skill", data: JSON.stringify({ skill } satisfies CreateSkillResponse) });
-    } catch (err) {
-      console.error("[skills/update] error:", err);
-      void reportError(err, { source: "POST /api/skills/update" });
-      await stream.writeSSE({ event: "error", data: JSON.stringify({ message: (err as Error).message }) });
-    }
-    await stream.writeSSE({ event: "done", data: "{}" });
-  });
 });
 
 // ---- Register a hand-authored skill with the official Skills API. ----
