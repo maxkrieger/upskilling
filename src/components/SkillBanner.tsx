@@ -81,22 +81,18 @@ export function SkillBanner({
           </span>
         </div>
         {highlights.length > 0 && (
-          <div className="border-t border-border px-4 py-3">
-            {/* Indent the checklist (icon width 44px + gap 12px = pl-14) so it
-                lines up with the name/description blurb above, not the icon. */}
-            <div className="space-y-2 pl-14">
-              {highlights.map((h, i) => (
-                <div key={i} className="flex items-center gap-2.5 text-sm text-ink">
-                  <span className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full bg-accent text-white">
-                    <Check size={11} strokeWidth={3} />
-                  </span>
-                  {h}
-                </div>
-              ))}
-            </div>
+          <div className="space-y-2 px-4 pb-1">
+            {highlights.map((h, i) => (
+              <div key={i} className="flex items-center gap-2.5 text-sm text-ink">
+                <span className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full bg-accent text-white">
+                  <Check size={11} strokeWidth={3} />
+                </span>
+                {h}
+              </div>
+            ))}
           </div>
         )}
-        <div className="border-t border-border px-4 py-2">
+        <div className="px-4 pb-4 pt-2">
           <button
             onClick={() => setView("customize")}
             className="text-xs text-faint underline underline-offset-2 hover:text-accent"
@@ -128,35 +124,35 @@ export function SkillBanner({
       <div className="overflow-hidden">
         <div className="animate-rise-in rounded-2xl border border-border bg-surface p-4 shadow-sm">
           <div className="flex items-center gap-3">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-peach text-accent">
-          <BookOpen size={20} />
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="text-sm font-semibold text-ink">
-            {isUpdate ? `Update your ${createdName} skill` : "Save this workflow as a Skill"}
-          </div>
-          <p className="mt-0.5 text-sm text-muted">
-            {isUpdate
-              ? "Fold your new preference into this skill"
-              : "Reuse this workflow without repeating yourself"}
-          </p>
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <button
-            disabled={busy || dismissing}
-            onClick={() => setDismissing(true)}
-            className="rounded-lg border border-border px-3 py-2 text-sm text-muted hover:bg-elevated disabled:opacity-60"
-          >
-            Not now
-          </button>
-          <button
-            disabled={busy || dismissing}
-            onClick={onAccept}
-            className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accentSoft disabled:opacity-60"
-          >
-            {isUpdate ? "Update Skill" : "Create Skill"}
-          </button>
-          </div>
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-peach text-accent">
+              <BookOpen size={20} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-semibold text-ink">
+                {isUpdate ? `Update your ${createdName} skill` : "Save this workflow as a Skill"}
+              </div>
+              <p className="mt-0.5 text-sm text-muted">
+                {isUpdate
+                  ? "Fold your new preference into this skill"
+                  : "Reuse this workflow without repeating yourself"}
+              </p>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <button
+                disabled={busy || dismissing}
+                onClick={() => setDismissing(true)}
+                className="rounded-lg border border-border px-3 py-2 text-sm text-muted hover:bg-elevated disabled:opacity-60"
+              >
+                Not now
+              </button>
+              <button
+                disabled={busy || dismissing}
+                onClick={onAccept}
+                className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accentSoft disabled:opacity-60"
+              >
+                {isUpdate ? "Update Skill" : "Create Skill"}
+              </button>
+            </div>
           </div>
         </div>
       </div>
