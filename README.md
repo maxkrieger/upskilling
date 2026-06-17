@@ -7,6 +7,9 @@ that workflow as a reusable Skill.
 
 See [`CLAUDE.md`](./CLAUDE.md) for the full product brief.
 
+> **Built with [Claude Code](https://claude.com/claude-code).** This project —
+> its code, docs, synthetic data, and this README — was written by Claude Code.
+
 ## Quick start
 
 ```bash
@@ -120,7 +123,9 @@ Covered paths:
 
 - **Backend** — `app.onError` (any uncaught route error), the chat stream and
   cue-decider catches, and Node `uncaughtException`/`unhandledRejection`.
-  Implemented with global `fetch`, so it also works in Cloudflare Pages Functions.
+  Implemented with global `fetch`; on the Workers runtime each alert is kept
+  alive past the response via `executionCtx.waitUntil` (otherwise the pending
+  send would be cancelled). Secrets are redacted before any text leaves.
 - **Frontend** — `window.error` / `unhandledrejection` listeners and a React
   `ErrorBoundary` POST to `/api/report-error`, which forwards to Discord.
 
