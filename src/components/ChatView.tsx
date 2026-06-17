@@ -47,7 +47,9 @@ export function ChatView() {
           <div className="mx-auto flex h-full max-w-3xl flex-col items-center justify-center px-4 text-center">
             <div className="flex items-center gap-3">
               <SparkBurst className="h-9 w-9 text-accent" />
-              <h1 className="font-serif text-4xl text-ink">{greeting()}</h1>
+              <h1 className="font-serif text-4xl text-ink">
+                {greeting()}, {profile.name}
+              </h1>
             </div>
             <p className="mt-3 max-w-md text-sm text-muted">{profile.blurb}</p>
             <p className="mt-6 text-xs text-faint">

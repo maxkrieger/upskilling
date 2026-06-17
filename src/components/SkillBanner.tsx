@@ -96,16 +96,15 @@ export function SkillBanner({
           <div className="text-sm font-semibold text-ink">
             {isUpdate ? `Update your ${createdName} skill` : "Save this workflow as a Skill"}
           </div>
-          <p className="mt-0.5 text-sm text-muted">
+          <p className="mt-0.5 truncate text-sm text-muted">
             {isUpdate
-              ? `Add this new preference${banner.summary ? ` — ${banner.summary}` : ""} — so you don't have to repeat it.`
+              ? banner.summary
+                ? `Adds ${banner.summary}`
+                : "Folds in your new preference"
               : banner.summary
-                ? `Remembers your usual specifics — ${banner.summary} — so you don't have to repeat your instructions.`
-                : "Capture this once so you don't have to repeat your instructions."}
+                ? `Remembers ${banner.summary}`
+                : "Captures your preferences for next time"}
           </p>
-          {!isUpdate && banner.trigger && (
-            <p className="mt-0.5 text-xs text-faint">Applies {banner.trigger}.</p>
-          )}
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <button
