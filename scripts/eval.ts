@@ -4,15 +4,43 @@
  *  - Cueing: precision / recall / F1 over a labeled dataset (scripts/eval-cases.ts).
  *  - Skill quality: for accepted-cluster cases, generate the skill and check that
  *    it captures the key verbatim preferences from the workflow evidence.
+ *  - Button-press flow: for every sample prompt in each profile, run the cue
+ *    decider; for create cues, simulate pressing "Create Skill" (the assent) and
+ *    verify the skill-creator fires then create_skill is called.
  *
  * Run: `npm run eval`.
  */
 import { writeFile, mkdir } from "node:fs/promises";
 import { decideCue } from "../server/cue.ts";
-import { jsonCall } from "../server/anthropic.ts";
-import { buildSkillCreatorSystem, buildSkillCreatorUser, SKILL_SCHEMA } from "../server/prompts.ts";
+import { jsonCall, streamChat } from "../server/anthropic.ts";
+import {
+  buildChatSystem,
+  buildSkillCreatorSystem,
+  buildSkillCreatorUser,
+  SKILL_SCHEMA,
+} from "../server/prompts.ts";
+import {
+  CODE_EXECUTION_TOOL,
+  CREATE_SKILL_TOOL,
+  deleteSkillRemote,
+  getSkillCreatorRef,
+  registerSkill,
+  skillContainer,
+  SKILLS_BETAS,
+  slugBase,
+  UPDATE_SKILL_TOOL,
+} from "../server/skills.ts";
+import { toAnthropicMessages } from "../server/util.ts";
 import { getProfile } from "../src/data/index.ts";
+import type { Attachment, PresetPrompt, Profile, Skill } from "../shared/types.ts";
 import { CUE_CASES } from "./eval-cases.ts";
+
+/** Resolve a preset's attachmentRefs against the profile's shared assets. */
+function resolveAtts(profile: Profile, preset: PresetPrompt): Attachment[] {
+  return (preset.attachmentRefs ?? [])
+    .map((n) => profile.attachments.find((a) => a.name === n))
+    .filter((a): a is Attachment => !!a);
+}
 
 interface Row {
   name: string;
@@ -117,13 +145,202 @@ async function evalSkillQuality() {
   return { skills: out, avgCoverage: avg };
 }
 
+/**
+ * Simulate pressing "Create Skill" after a sample prompt: build the conversation
+ * as it stands when the button appears (prompt → cue-offer reply → the assent
+ * the button injects), then run the real chat assembly and require the
+ * skill-creator to fire BEFORE create_skill is called.
+ */
+async function simulateButtonPress(
+  profile: Profile,
+  preset: PresetPrompt,
+  preferences: string | undefined,
+  container: unknown,
+  tools: unknown[],
+  creatorSlug: string,
+  registerCreated: boolean,
+): Promise<{ created: boolean; creatorFiredFirst: boolean; skill: Skill | null }> {
+  const system = buildChatSystem({ profileName: profile.name, profileRole: profile.role });
+  const messages: any[] = toAnthropicMessages([
+    { role: "user", content: preset.prompt, attachments: resolveAtts(profile, preset) },
+    {
+      role: "assistant",
+      content: `Here you go.\n\nI've noticed you keep asking for this with the same preferences (${preferences ?? "your usual setup"}). I can capture it as a reusable Skill so you don't have to restate them. Want me to?`,
+    },
+    { role: "user", content: "Yes — go ahead and capture that workflow as a Skill." },
+  ]);
+  let created = false;
+  let creatorFired = false;
+  let creatorFiredFirst = false;
+  let skill: Skill | null = null;
+  for (let attempt = 0; attempt < 3 && !created; attempt++) {
+    let text = "";
+    await streamChat({
+      system,
+      messages,
+      maxTokens: 4000,
+      container,
+      tools,
+      betas: SKILLS_BETAS,
+      handlers: {
+        onText: (d) => (text += d),
+        onSkillFired: (slug) => {
+          if (slug === creatorSlug || slugBase(slug) === slugBase(creatorSlug)) creatorFired = true;
+        },
+        onToolUse: async (name, input) => {
+          if (name === "create_skill") {
+            created = true;
+            creatorFiredFirst = creatorFired;
+            // Register for real so the loose-fire phase can mount + trigger it.
+            if (registerCreated && !skill) {
+              const reg = await registerSkill(input);
+              skill = {
+                id: `eval_${reg.slug}`,
+                name: input.name,
+                description: input.description,
+                instructions: input.instructions,
+                source: "user",
+                enabled: true,
+                createdAt: new Date().toISOString(),
+                skillId: reg.skillId,
+                skillVersion: reg.skillVersion,
+                slug: reg.slug,
+              };
+            }
+          }
+          return `Saved. "${input?.name}" is active.`;
+        },
+      },
+    });
+    if (created) break;
+    messages.push({ role: "assistant", content: text || "(thinking)" });
+    messages.push({ role: "user", content: "Yes, go ahead and create it now." });
+  }
+  return { created, creatorFiredFirst, skill };
+}
+
+/** Does a preset (with its attachments) cause `targetSlug`'s skill to fire? */
+async function askFires(
+  profile: Profile,
+  preset: PresetPrompt,
+  container: unknown,
+  targetSlug: string,
+): Promise<boolean> {
+  let fired = false;
+  await streamChat({
+    system: buildChatSystem({ profileName: profile.name, profileRole: profile.role }),
+    messages: toAnthropicMessages([
+      { role: "user", content: preset.prompt, attachments: resolveAtts(profile, preset) },
+    ]),
+    maxTokens: 2500,
+    container,
+    tools: [CODE_EXECUTION_TOOL],
+    betas: SKILLS_BETAS,
+    handlers: {
+      onText: () => {},
+      onSkillFired: (slug) => {
+        if (slug === targetSlug || slugBase(slug) === slugBase(targetSlug)) fired = true;
+      },
+    },
+  });
+  return fired;
+}
+
+/**
+ * Full lifecycle per profile: the workflow presets cue + create a skill (via the
+ * button press), then the loose presets must FIRE that created skill.
+ */
+async function evalLifecycle() {
+  console.log("\n=== Skill lifecycle: cue → create (button) → fire on loose asks ===");
+  const creatorRef = await getSkillCreatorRef();
+  const creatorContainer = skillContainer([], creatorRef);
+  const createTools = [CODE_EXECUTION_TOOL, CREATE_SKILL_TOOL, UPDATE_SKILL_TOOL];
+
+  const rows: Array<{ profile: string; phase: string; preset: string; ok: boolean | null; note?: string }> = [];
+  const registeredIds: string[] = [];
+
+  try {
+    for (const pid of ["analyst", "lawyer", "social"]) {
+      const profile = getProfile(pid)!;
+      console.log(`\n${pid}:`);
+      let createdSkill: Skill | null = null;
+
+      // Phase 1 — presets: workflow ones cue + create (register the first).
+      for (const preset of profile.presets ?? []) {
+        const decision = await decideCue({
+          userMessage: preset.prompt,
+          workflowIndex: profile.workflowIndex,
+          skills: [],
+        });
+        const isCreate = !!decision.shouldCue && decision.kind === "create" && !!decision.workflowSetId;
+        if (isCreate) {
+          const r = await simulateButtonPress(
+            profile,
+            preset,
+            decision.preferences,
+            creatorContainer,
+            createTools,
+            creatorRef.slug,
+            !createdSkill,
+          );
+          if (r.skill) {
+            createdSkill = r.skill;
+            registeredIds.push(r.skill.skillId!);
+          }
+          const ok = r.created && r.creatorFiredFirst;
+          console.log(
+            `  create  ${preset.title} → ${r.creatorFiredFirst ? "creator fired" : "creator NOT fired"}` +
+              ` / ${r.created ? "create_skill ✓" : "create_skill ✗"}`,
+          );
+          rows.push({ profile: pid, phase: "create", preset: preset.title, ok });
+        } else {
+          console.log(`  cue     ${preset.title} → ${decision.shouldCue ? decision.kind : "no cue"} (no create button)`);
+          rows.push({ profile: pid, phase: "cue", preset: preset.title, ok: null, note: decision.shouldCue ? decision.kind : "no-cue" });
+        }
+      }
+
+      // Phase 2 — loose presets: workflow ones must fire the created skill;
+      // spurious "one-off" asks must NOT (the skill shouldn't over-trigger).
+      if (createdSkill) {
+        const liveContainer = skillContainer([createdSkill], creatorRef);
+        for (const loose of profile.loosePresets ?? []) {
+          const expectFire = !/one-?off/i.test(loose.subtitle ?? "");
+          const fired = await askFires(profile, loose, liveContainer, createdSkill.slug!);
+          const ok = fired === expectFire;
+          console.log(
+            `  ${ok ? "✓" : "✗"} fire  ${loose.title} → ${fired ? "fired" : "no fire"}` +
+              ` (expected ${expectFire ? "fire" : "no fire"})`,
+          );
+          rows.push({ profile: pid, phase: "fire", preset: loose.title, ok, note: expectFire ? "expect-fire" : "expect-skip" });
+        }
+      } else {
+        console.log("  (no skill created — skipping loose-fire checks)");
+      }
+    }
+  } finally {
+    for (const sid of registeredIds) await deleteSkillRemote(sid);
+    await deleteSkillRemote(creatorRef.skill_id);
+  }
+
+  const created = rows.filter((r) => r.phase === "create");
+  const fires = rows.filter((r) => r.phase === "fire");
+  const createOk = created.filter((r) => r.ok).length;
+  const fireOk = fires.filter((r) => r.ok).length;
+  console.log(
+    `\n  create (button→skill): ${createOk}/${created.length}` +
+      ` | loose asks fire the created skill: ${fireOk}/${fires.length}`,
+  );
+  return { rows, createOk, createTotal: created.length, fireOk, fireTotal: fires.length };
+}
+
 async function main() {
   const cueing = await evalCueing();
   const quality = await evalSkillQuality();
+  const lifecycle = await evalLifecycle();
   await mkdir("eval-results", { recursive: true });
   await writeFile(
     "eval-results/eval.json",
-    JSON.stringify({ cueing, quality, at: new Date().toISOString() }, null, 2),
+    JSON.stringify({ cueing, quality, lifecycle, at: new Date().toISOString() }, null, 2),
   );
   console.log("\nWrote eval-results/eval.json");
 }
