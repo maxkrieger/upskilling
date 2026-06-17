@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CheckCircle2, Sparkles, Wand2, X } from "lucide-react";
+import { BookOpen, CheckCircle2 } from "lucide-react";
 import type { SkillCueBanner } from "../../shared/types.ts";
 import { useStore } from "../store.ts";
 import { ThinkingGlyph } from "./ThinkingGlyph.tsx";
@@ -17,7 +17,6 @@ export function SkillBanner({
   const acceptCue = useStore((s) => s.acceptCue);
   const acceptUpdate = useStore((s) => s.acceptUpdate);
   const dismissCue = useStore((s) => s.dismissCue);
-  const snoozeCue = useStore((s) => s.snoozeCue);
   const setView = useStore((s) => s.setView);
   const skills = useStore((s) => s.skillsByProfile[s.activeProfileId] ?? s.skillsOf());
   const [busy, setBusy] = useState(false);
@@ -79,24 +78,16 @@ export function SkillBanner({
   };
 
   return (
-    <div className="relative mt-3 rounded-2xl border border-border bg-surface p-4 shadow-sm">
-      <button
-        onClick={() => snoozeCue(conversationId, messageId)}
-        title="Snooze skill suggestions"
-        aria-label="Snooze skill suggestions"
-        className="absolute right-2 top-2 rounded-md p-1 text-faint hover:bg-elevated hover:text-ink"
-      >
-        <X size={15} />
-      </button>
+    <div className="mt-3 rounded-2xl border border-border bg-surface p-4 shadow-sm">
       <div className="flex items-center gap-3">
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-peach text-accent">
-          {isUpdate ? <Wand2 size={20} /> : <Sparkles size={20} />}
+          <BookOpen size={20} />
         </div>
-        <div className="min-w-0 flex-1 pr-5">
+        <div className="min-w-0 flex-1">
           <div className="text-sm font-semibold text-ink">
             {isUpdate ? `Update your ${createdName} skill` : "Save this workflow as a Skill"}
           </div>
-          <p className="mt-0.5 truncate text-sm text-muted">
+          <p className="mt-0.5 text-sm text-muted">
             {isUpdate
               ? banner.summary
                 ? `Adds ${banner.summary}`

@@ -1,4 +1,4 @@
-import { FileText, Image as ImageIcon, Wand2 } from "lucide-react";
+import { BookOpen, FileText, Image as ImageIcon } from "lucide-react";
 import type { Message } from "../../shared/types.ts";
 import { useStore } from "../store.ts";
 import { Markdown } from "./Markdown.tsx";
@@ -78,7 +78,7 @@ export function MessageView({
 
         {applied.length > 0 && (
           <div className="mt-2 flex items-center gap-1 text-xs text-faint">
-            <Wand2 size={12} />
+            <BookOpen size={12} />
             Applied skill{applied.length > 1 ? "s" : ""}:{" "}
             {applied.map((s) => s!.name).join(", ")}
           </div>

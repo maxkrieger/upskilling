@@ -87,7 +87,7 @@ async function evalSkillQuality() {
   console.log("\n=== Skill quality (key-preference coverage) ===");
   const targets = [
     { profileId: "analyst", cluster: "deck-bar-charts", keys: ["gridlin", "legend", "sort", "palette"] },
-    { profileId: "lawyer", cluster: "nda-review", keys: ["mutual", "clause", "risk", "non-solicit"] },
+    { profileId: "lawyer", cluster: "nda-review", keys: ["mutual", "non-solicit", "off-market", "edit"] },
     { profileId: "social", cluster: "instagram-art-caption", keys: ["hashtag", "em dash", "highbrow", "grandi"] },
   ];
 

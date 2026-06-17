@@ -104,17 +104,17 @@ Helio Labs, Inc. (the "Company") is pleased to offer you the position of Senior 
 
 /**
  * Corporate Counsel persona. Primary workflow cluster: NDA review with a fixed
- * house standard (must be mutual, governed by CA or DE, clause-by-clause table,
- * per-clause risk rating, no non-solicit riders, flag off-market terms). Two
- * prior NDA-review conversations repeat those preferences verbatim, making the
- * cluster "overdue" for a skill, so a matching preset prompt triggers a cue.
+ * house standard (must be mutual, governed by CA or DE, no non-solicit riders;
+ * output is just the off-market flags and required edits, not a clause-by-clause
+ * table). Two prior NDA-review conversations repeat those preferences verbatim,
+ * making the cluster "overdue" for a skill, so a matching preset triggers a cue.
  */
 export const lawyerProfile: Profile = {
   id: "lawyer",
   name: "Corporate Counsel",
   role: "Reviews NDAs and commercial contracts against a fixed in-house playbook.",
   blurb:
-    "Lives in redlines and risk tables. Has a consistent, repeated checklist for how NDAs must be reviewed.",
+    "Lives in redlines. Has a consistent, repeated checklist for how NDAs must be reviewed.",
   emoji: "⚖️",
 
   attachments: [
@@ -129,7 +129,7 @@ export const lawyerProfile: Profile = {
       title: "Review an NDA",
       subtitle: "Against the in-house standard",
       prompt:
-        "Review this NDA against our standard: it must be mutual, governed by California or Delaware, give me a clause-by-clause table that rates the risk of each clause, no non-solicit riders, and flag any off-market clauses.",
+        "Review this NDA against our standard: it must be mutual, governed by California or Delaware, and have no non-solicit riders. Don't give me a clause-by-clause table — just flag the off-market clauses and list the required edits.",
       attachmentRefs: ["acme_nda.txt"],
     },
     {
@@ -137,7 +137,7 @@ export const lawyerProfile: Profile = {
       title: "Review a vendor NDA",
       subtitle: "Same playbook, new counterparty",
       prompt:
-        "Run our usual NDA review on this vendor agreement — mutual, CA or DE governing law, clause-by-clause risk table, no non-solicit, flag off-market terms.",
+        "Run our usual NDA review on this vendor agreement — mutual, CA or DE governing law, no non-solicit. Skip the clause-by-clause table; just flag the off-market terms and the required edits.",
       attachmentRefs: ["vendor_nda.txt"],
     },
     {
@@ -188,7 +188,7 @@ export const lawyerProfile: Profile = {
           id: "m1",
           role: "user",
           content:
-            "Review this NDA. As always: it needs to be mutual, governed by California or Delaware, give me a clause-by-clause table that rates the risk of each clause, no non-solicit riders, and flag anything off-market.",
+            "Review this NDA. As always: it needs to be mutual, governed by California or Delaware, and no non-solicit riders. Don't do a clause-by-clause table — just flag the off-market clauses and the required edits.",
           createdAt: "2026-05-06T14:05:00.000Z",
           attachments: [
             { id: "a1", name: "acme_nda.txt", kind: "text", content: ACME_NDA },
@@ -198,7 +198,7 @@ export const lawyerProfile: Profile = {
           id: "m2",
           role: "assistant",
           content:
-            "Reviewed against the house standard. **Bottom line: not signable as drafted.** Despite the \"Mutual\" caption, Section 3.4 makes the obligations **one-way** in Acme's favor; governing law is **New York** (not CA/DE); the term **survives in perpetuity** (§5.2); there's a **24-month non-solicit** rider (§10) we never accept; and the **assignment** right (§11.1) is unrestricted. Four off-market flags, plus the caption/operative-text mismatch.\n\n| # | Clause | Summary | Risk | Note vs. standard |\n|---|--------|---------|------|--------------------|\n| 1 | §1 Definitions | Confidential Information defined broadly; covers unmarked info and the terms of the deal | Low | Acceptable; standard scope |\n| 2 | §2 Exclusions | Standard four exclusions, requires \"competent written records\" | Low | Market — keep |\n| 3 | §3.1–3.3 Obligations | Reasonable-care standard, need-to-know, use limited to Purpose | Low | Fine in isolation |\n| 4 | §3.4 One-Way Carve-Out | Confidentiality runs only against Counterparty; Acme bears none | **High** | **Off-market — caption says mutual; strike 3.4 and make reciprocal** |\n| 5 | §4 Compelled Disclosure | Notice-and-cooperate before compelled disclosure | Low | Market standard |\n| 6 | §5.2 Term / Survival | Confidentiality survives **in perpetuity** | **High** | **Off-market — cap survival at 3–5 yrs** |\n| 7 | §6 Return/Destruction | Return or destroy on request; one archival copy | Low | Acceptable |\n| 8 | §7 No License / No Warranty | No IP license; info \"AS IS\" | Low | Standard |\n| 9 | §8 Governing Law | **New York**, exclusive NY venue | **High** | **Must be CA or DE — reject** |\n| 10 | §9 Injunctive Relief | Equitable relief, **no bond**, only in Acme's favor | Medium | Common, but make remedies mutual |\n| 11 | §10 Non-Solicitation | **24-month** no-hire + no-divert of customers | **High** | **Strike rider entirely — house rule** |\n| 12 | §11 Assignment | Acme may assign freely **without consent**; Counterparty may not | **High** | **Off-market — make mutual, add consent** |\n| 13 | §12 Miscellaneous | Notices, entire agreement, severability, amendment, counterparts | Low | Boilerplate; acceptable |\n\nWant me to draft the redline strikes for §3.4, §5.2, §8, §10, and §11, and convert the operative language to genuinely mutual?",
+            "Reviewed against the house standard. **Bottom line: not signable as drafted** — 5 off-market flags.\n\n**Flags**\n- **Not actually mutual** (§3.4): despite the \"Mutual\" caption, obligations run one-way in Acme's favor.\n- **Governing law** (§8): New York, not CA/DE.\n- **Perpetual survival** (§5.2): confidentiality never expires.\n- **Non-solicit rider** (§10): 24-month no-hire + no-divert; we never accept these.\n- **Unrestricted assignment** (§11.1): Acme may assign without consent; counterparty may not.\n\n**Required edits**\n- Strike §3.4 and rewrite §3 so obligations bind each party (genuinely mutual).\n- §8 → Delaware (or California).\n- §5.2 → cap survival at 3–5 years.\n- Delete the §10 non-solicit rider in full.\n- Make §11 mutual and add a consent requirement.\n\nWant me to apply these as a redline?",
           createdAt: "2026-05-06T14:10:00.000Z",
         },
         {
@@ -228,7 +228,7 @@ export const lawyerProfile: Profile = {
           id: "m1",
           role: "user",
           content:
-            "Same NDA review as usual on this vendor one — mutual, governed by Delaware or California, clause-by-clause table with a risk rating, no non-solicit, and flag off-market clauses.",
+            "Same NDA review as usual on this vendor one — mutual, governed by Delaware or California, no non-solicit. No clause-by-clause table; just the off-market flags and required edits.",
           createdAt: "2026-05-21T10:40:00.000Z",
           attachments: [
             { id: "a1", name: "vendor_nda.txt", kind: "text", content: VENDOR_NDA },
@@ -238,7 +238,7 @@ export const lawyerProfile: Profile = {
           id: "m2",
           role: "assistant",
           content:
-            "Clause-by-clause below. **Good news:** governing law is **Delaware** (§8), which meets the standard. **Problems:** the agreement is **one-way** in Northwind's favor (§3.2), confidentiality **survives 7 years** (§5.2) which is over our preferred cap, there's a **12-month non-solicit** rider (§10) we don't accept, and **assignment** is one-sided (§11). Three off-market flags plus the survival length.\n\n| # | Clause | Summary | Risk | Note vs. standard |\n|---|--------|---------|------|--------------------|\n| 1 | §1 Definitions | CI = marked OR reasonable-person standard | Low | Acceptable scope |\n| 2 | §2 Exclusions | Standard four exclusions | Low | Market — keep |\n| 3 | §3.1 Use/Disclosure | Use limited to Purpose; no third-party disclosure | Low | Fine |\n| 4 | §3.2 One-Way Obligations | Only Vendor is bound; Northwind free to use Vendor's info | **High** | **Off-market — make mutual** |\n| 5 | §3.3 Standard of Care | Reasonable care + breach notice | Low | Acceptable |\n| 6 | §4 Compelled Disclosure | Notice + cooperation, at Northwind's expense | Low | Market standard |\n| 7 | §5.1 Term | Two-year term, terminable by Northwind | Low | Fine |\n| 8 | §5.2 Survival | **7 years** post-disclosure | Medium | **Long — prefer 3–5 yrs** |\n| 9 | §6 Return/Destruction | Return or destroy + certify | Low | Acceptable |\n| 10 | §7 No License / No Warranty | No IP license; \"AS IS\" | Low | Standard |\n| 11 | §8 Governing Law | **Delaware**, Wilmington venue | Low | **Meets standard** |\n| 12 | §9 Injunctive Relief | Equitable relief for Northwind | Medium | Make mutual |\n| 13 | §10 Non-Solicitation | **12-month** no-hire (general-solicitation carve-out) | **High** | **Strike rider — house rule** |\n| 14 | §11 Assignment | Northwind may assign w/o consent; Vendor may not | **High** | **Off-market — make mutual / add consent** |\n| 15 | §12 Miscellaneous | Notices, entire agreement, severability, counterparts | Low | Boilerplate; acceptable |\n\nWant me to make §3.2 mutual, shorten §5.2 to five years, strike §10, and balance §11 with a consent requirement?",
+            "Reviewed. **Governing law is Delaware (§8) — that one passes.** Otherwise 3 off-market flags plus an over-long survival.\n\n**Flags**\n- **One-way** (§3.2): only Vendor is bound; Northwind isn't.\n- **Survival 7 years** (§5.2): over our 3–5 year cap.\n- **Non-solicit rider** (§10): 12-month no-hire (general-solicitation carve-out); we don't accept these.\n- **One-sided assignment** (§11): Northwind may assign without consent; Vendor may not.\n\n**Required edits**\n- Make §3.2 mutual.\n- §5.2 → 5 years.\n- Delete the §10 non-solicit rider.\n- Make §11 mutual / add a consent requirement.\n\nWant me to apply these as a redline?",
           createdAt: "2026-05-21T10:45:00.000Z",
         },
       ],
@@ -330,27 +330,25 @@ export const lawyerProfile: Profile = {
         {
           conversationId: "c_law_nda1",
           summary:
-            "Reviewed the Acme NDA against the house standard; required it be 'mutual', 'governed by California or Delaware', a 'clause-by-clause table' that 'rates the risk of each clause', 'no non-solicit riders', and to 'flag anything off-market'.",
+            "Reviewed the Acme NDA against the house standard; required it be 'mutual', 'governed by California or Delaware', 'no non-solicit riders', and asked to skip the clause-by-clause table and just 'flag the off-market clauses and the required edits'.",
           quotes: [
             "mutual",
             "governed by California or Delaware",
-            "clause-by-clause table",
-            "rates the risk of each clause",
             "no non-solicit riders",
-            "flag anything off-market",
+            "flag the off-market clauses",
+            "the required edits",
           ],
           cluster: "nda-review",
         },
         {
           conversationId: "c_law_nda2",
           summary:
-            "Ran the usual NDA review on the Northwind vendor agreement; required 'mutual', 'governed by Delaware or California', a 'clause-by-clause table with a risk rating', 'no non-solicit', and to 'flag off-market clauses'.",
+            "Ran the usual NDA review on the Northwind vendor agreement; required 'mutual', 'governed by Delaware or California', 'no non-solicit', and asked for just the 'off-market flags and required edits' (no clause-by-clause table).",
           quotes: [
             "mutual",
             "governed by Delaware or California",
-            "clause-by-clause table with a risk rating",
             "no non-solicit",
-            "flag off-market clauses",
+            "off-market flags and required edits",
           ],
           cluster: "nda-review",
         },
