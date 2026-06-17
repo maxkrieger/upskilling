@@ -7,8 +7,12 @@
   "scripts": {
     "dev": "concurrently -n api,web -c blue,green \"npm:dev:api\" \"npm:dev:web\"",
     "dev:web": "vite",
-    "dev:api": "tsx watch server/index.ts",
+    "dev:api": "tsx watch server/dev.ts",
+    "gen:skill": "node scripts/gen-skill-creator.mjs",
+    "prebuild": "node scripts/gen-skill-creator.mjs",
     "build": "vite build",
+    "cf:dev": "npm run build && wrangler pages dev",
+    "deploy": "npm run build && wrangler pages deploy",
     "preview": "vite preview",
     "eval": "tsx scripts/eval.ts",
     "test:skill": "tsx scripts/test-skill-creation.ts",
@@ -45,6 +49,7 @@
     "tailwindcss": "^3.4.17",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
-    "vite": "^6.0.3"
+    "vite": "^6.0.3",
+    "wrangler": "^4.101.0"
   }
 }

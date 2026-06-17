@@ -133,12 +133,8 @@ export function SkillBanner({
           </div>
           <p className="mt-0.5 text-sm text-muted">
             {isUpdate
-              ? banner.summary
-                ? `Adds ${banner.summary}`
-                : "Folds in your new preference"
-              : banner.summary
-                ? `Remembers ${banner.summary}`
-                : "Captures your preferences for next time"}
+              ? "Fold your new preference into this skill"
+              : "Reuse this workflow without repeating yourself"}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">

@@ -1,0 +1,8 @@
+# Cloudflare Pages config. Obscure project name -> obscure default URL
+# (upskilling-907f60f048.pages.dev), since *.pages.dev is otherwise guessable.
+name = "upskilling-907f60f048"
+pages_build_output_dir = "dist"
+compatibility_date = "2024-11-01"
+# nodejs_compat provides node built-ins (and lets functions/api bridge env to
+# process.env). Required because the app uses some node:* imports indirectly.
+compatibility_flags = ["nodejs_compat"]

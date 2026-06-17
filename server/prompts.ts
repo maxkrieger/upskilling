@@ -1,16 +1,10 @@
-import { readFileSync } from "node:fs";
 import type { WorkflowSet, Conversation } from "../shared/types.ts";
+// Embedded at codegen time (no node:fs — Workers has no filesystem). Source of
+// truth is lib/skills/skill-creator/SKILL.md; run `npm run gen:skill` to refresh.
+import { SKILL_CREATOR_MD } from "./generated/skillCreator.ts";
 
 /** The bundled skill-creator skill's own instructions (the source of truth). */
-let SKILL_CREATOR_GUIDE = "";
-try {
-  SKILL_CREATOR_GUIDE = readFileSync(
-    new URL("../lib/skills/skill-creator/SKILL.md", import.meta.url),
-    "utf8",
-  );
-} catch (e) {
-  console.warn("[prompts] could not load skill-creator SKILL.md:", (e as Error).message);
-}
+const SKILL_CREATOR_GUIDE = SKILL_CREATOR_MD;
 
 export const CHART_INSTRUCTIONS = `When the user asks for a chart, graph, or visualization, emit a fenced code block with the language tag \`chart\` containing JSON of this shape:
 \`\`\`chart

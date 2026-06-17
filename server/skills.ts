@@ -1,6 +1,6 @@
-import { readFileSync } from "node:fs";
 import { toFile } from "@anthropic-ai/sdk";
 import { anthropic } from "./anthropic.ts";
+import { SKILL_CREATOR_MD } from "./generated/skillCreator.ts";
 import type { Skill } from "../shared/types.ts";
 
 const beta = anthropic.beta as any;
@@ -81,8 +81,7 @@ let skillCreatorRef: Promise<{ skill_id: string; version: string; slug: string }
 export function getSkillCreatorRef(): Promise<{ skill_id: string; version: string; slug: string }> {
   if (!skillCreatorRef) {
     skillCreatorRef = (async () => {
-      const md = readFileSync(new URL("../lib/skills/skill-creator/SKILL.md", import.meta.url), "utf8");
-      const { name, description, body } = parseSkillMd(md);
+      const { name, description, body } = parseSkillMd(SKILL_CREATOR_MD);
       const reg = await registerSkill({ name, description, instructions: body });
       return { skill_id: reg.skillId, version: reg.skillVersion, slug: reg.slug };
     })().catch((e) => {

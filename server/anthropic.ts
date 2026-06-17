@@ -1,10 +1,25 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { ENV } from "./env.ts";
 
-export const anthropic = new Anthropic({
-  apiKey: ENV.ANTHROPIC_API_KEY,
-  // The demo org has a low concurrent-connection limit; retry 429s patiently.
-  maxRetries: 6,
+// Created lazily on first use so the API key is read at REQUEST time, not module
+// load — on the Workers runtime env bindings aren't available at module scope.
+let _client: Anthropic | null = null;
+function getClient(): Anthropic {
+  if (!_client) {
+    _client = new Anthropic({
+      apiKey: ENV.ANTHROPIC_API_KEY,
+      // The demo org has a low concurrent-connection limit; retry 429s patiently.
+      maxRetries: 6,
+    });
+  }
+  return _client;
+}
+
+/** Lazy proxy: `anthropic.beta.messages…` resolves the real client on first access. */
+export const anthropic = new Proxy({} as Anthropic, {
+  get(_t, prop) {
+    return (getClient() as any)[prop];
+  },
 });
 
 export interface JsonCallOptions {

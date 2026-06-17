@@ -1,6 +1,3 @@
-import { realpathSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
 import { streamSSE } from "hono/streaming";
@@ -383,46 +380,6 @@ app.post("/api/skills/delete", async (c) => {
   return c.json({ ok: true });
 });
 
-// Process-level crash alerting (Node runtime only; CF Pages uses app.onError).
-process.on("unhandledRejection", (reason) => {
-  console.error("[api] unhandledRejection:", reason);
-  void reportError(reason, { source: "process.unhandledRejection" });
-});
-process.on("uncaughtException", (err) => {
-  console.error("[api] uncaughtException:", err);
-  void reportError(err, { source: "process.uncaughtException" });
-});
-
-// Only start a listening server when run directly (e.g. `tsx server/index.ts`),
-// not when imported for tests (which drive the app via `app.fetch`). Compare
-// real paths so a relative argv or a /tmp→/private/tmp symlink doesn't fool it.
-function runningDirectly(): boolean {
-  try {
-    return (
-      !!process.argv[1] &&
-      realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))
-    );
-  } catch {
-    return false;
-  }
-}
-if (runningDirectly()) {
-  const server = serve({ fetch: app.fetch, port: ENV.API_PORT }, (info) => {
-    console.log(`[api] listening on http://localhost:${info.port} (model: ${ENV.MODEL_MAIN})`);
-  });
-  // Exit promptly on reload/quit. Without this the listening socket + the
-  // Anthropic SDK's keep-alive sockets hold the event loop open, so `tsx watch`
-  // hits its 5s timeout and force-kills on every restart.
-  let closing = false;
-  for (const sig of ["SIGTERM", "SIGINT"] as const) {
-    process.once(sig, () => {
-      if (closing) process.exit(0);
-      closing = true;
-      server.close(() => process.exit(0));
-      // Don't wait on in-flight streams to drain.
-      setTimeout(() => process.exit(0), 250).unref();
-    });
-  }
-}
-
+// This module is the runtime-agnostic Hono app (Workers/CF Pages import it via
+// functions/api/[[route]].ts; local Node dev serves it via server/dev.ts).
 export default app;
