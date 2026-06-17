@@ -130,13 +130,30 @@ export async function streamChat(params: {
       params.handlers.onText(delta);
     });
 
+    // Detect skill firings LIVE: the model reads `/skills/<slug>/…` when it loads
+    // a mounted skill. Emitting on each block as it completes (not after the whole
+    // message) lets the UI splice the "using skill" chip mid-stream. `full.length`
+    // at block-stop is the offset right before the model's post-skill text — the
+    // exact gap where the chip belongs.
+    const firedThisTurn = new Set<string>();
+    if (params.handlers.onSkillFired) {
+      stream.on("contentBlock", (block: any) => {
+        if (!block || block.type === "text") return;
+        const slug = JSON.stringify(block).match(/\/skills\/([^/"\\]+)\//)?.[1];
+        if (slug && !firedThisTurn.has(slug)) {
+          firedThisTurn.add(slug);
+          params.handlers.onSkillFired!(slug, full.length);
+        }
+      });
+    }
+
     const finalMsg: any = await stream.finalMessage();
     // Reuse the same (warm) container on continuation turns via its id.
     if (finalMsg.container?.id) container = { id: finalMsg.container.id };
 
-    // Detect skill firings: the model reads `/skills/<slug>/…` when it loads a
-    // mounted skill. Report each with the content offset (text before the read
-    // block) so the UI can splice a "using skill" indicator at that exact gap.
+    // Fallback: recover any firing the live listener missed (e.g. an SDK without
+    // contentBlock events) from the final message content, computing the offset
+    // from the text-block lengths before the skill-read block.
     if (params.handlers.onSkillFired) {
       let textLen = 0;
       for (const b of finalMsg.content ?? []) {
@@ -145,7 +162,10 @@ export async function streamChat(params: {
           continue;
         }
         const slug = JSON.stringify(b).match(/\/skills\/([^/"\\]+)\//)?.[1];
-        if (slug) params.handlers.onSkillFired(slug, turnStartLen + textLen);
+        if (slug && !firedThisTurn.has(slug)) {
+          firedThisTurn.add(slug);
+          params.handlers.onSkillFired(slug, turnStartLen + textLen);
+        }
       }
     }
 

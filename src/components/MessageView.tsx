@@ -71,11 +71,15 @@ export function MessageView({
   // they belong: a "using skill" chip wherever a skill fired, and the
   // created/updated result card at the tool-use point.
   const inserts: Array<{ at: number; node: ReactNode }> = [];
-  if (!streaming) {
-    for (const u of message.skillUses ?? []) {
-      inserts.push({ at: Math.min(u.at, message.content.length), node: <UsingChip name={u.name} /> });
-    }
-    if (isCard) inserts.push({ at: Math.min(message.cardSplitAt ?? 0, message.content.length), node: card });
+  // "Using <skill>" chips splice in during streaming too, as soon as the firing
+  // event arrives — so the chip shows at its gap live, not only once the reply ends.
+  for (const u of message.skillUses ?? []) {
+    inserts.push({ at: Math.min(u.at, message.content.length), node: <UsingChip name={u.name} /> });
+  }
+  // The created/updated result card only belongs once the reply (and its banner)
+  // has settled, so keep it out of the streaming pass.
+  if (!streaming && isCard) {
+    inserts.push({ at: Math.min(message.cardSplitAt ?? 0, message.content.length), node: card });
   }
   inserts.sort((a, b) => a.at - b.at);
 

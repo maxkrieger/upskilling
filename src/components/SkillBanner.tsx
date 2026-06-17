@@ -81,15 +81,19 @@ export function SkillBanner({
           </span>
         </div>
         {highlights.length > 0 && (
-          <div className="space-y-2 border-t border-border px-4 py-3">
-            {highlights.map((h, i) => (
-              <div key={i} className="flex items-center gap-2 text-sm text-ink">
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent text-white">
-                  <Check size={12} />
-                </span>
-                {h}
-              </div>
-            ))}
+          <div className="border-t border-border px-4 py-3">
+            {/* Indent the checklist (icon width 44px + gap 12px = pl-14) so it
+                lines up with the name/description blurb above, not the icon. */}
+            <div className="space-y-2 pl-14">
+              {highlights.map((h, i) => (
+                <div key={i} className="flex items-center gap-2.5 text-sm text-ink">
+                  <span className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full bg-accent text-white">
+                    <Check size={11} strokeWidth={3} />
+                  </span>
+                  {h}
+                </div>
+              ))}
+            </div>
           </div>
         )}
         <div className="border-t border-border px-4 py-2">

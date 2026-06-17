@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowUp, FileText, Image as ImageIcon, Paperclip, X } from "lucide-react";
 import type { Attachment, AttachmentKind, PresetPrompt } from "../../shared/types.ts";
 import { getProfile } from "../data/index.ts";
@@ -36,6 +36,18 @@ export function Composer({ showPresets }: { showPresets: boolean }) {
   const [text, setText] = useState("");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
+  const taRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-grow the textarea with its content (up to max-h-40, then it scrolls).
+  // Runs on every text change, so it also resets to one line after send/clear
+  // and grows when a preset fills the box.
+  const MAX_TEXTAREA_PX = 160; // matches max-h-40 (10rem)
+  useEffect(() => {
+    const el = taRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, MAX_TEXTAREA_PX)}px`;
+  }, [text]);
 
   const submit = async (overrideText?: string, overrideAtt?: Attachment[]) => {
     const t = (overrideText ?? text).trim();
@@ -130,6 +142,7 @@ export function Composer({ showPresets }: { showPresets: boolean }) {
           onChange={(e) => onFiles(e.target.files)}
         />
         <textarea
+          ref={taRef}
           autoFocus
           value={text}
           onChange={(e) => setText(e.target.value)}
@@ -141,7 +154,7 @@ export function Composer({ showPresets }: { showPresets: boolean }) {
           }}
           rows={1}
           placeholder="Message Claude…"
-          className="max-h-40 flex-1 resize-none bg-transparent px-1 py-2 text-ink outline-none placeholder:text-faint"
+          className="max-h-40 flex-1 resize-none overflow-y-auto bg-transparent px-1 py-2 text-ink outline-none placeholder:text-faint"
         />
         <button
           onClick={() => submit()}
