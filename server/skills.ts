@@ -19,7 +19,7 @@ export const CODE_EXECUTION_TOOL = { type: "code_execution_20250825", name: "cod
 export const CREATE_SKILL_TOOL = {
   name: "create_skill",
   description:
-    "Save a new Skill so the user's preferences apply automatically next time. Call this once the SKILL.md content is ready. This is the only way a skill is persisted — do not write files to the workspace and do not ask the user to copy/paste.",
+    "Save a new Skill so the user's preferences apply automatically next time. BEFORE calling this, you MUST consult the skill-creator skill — read its SKILL.md (it is mounted in the container) and follow its authoring methodology to shape the name, description, and instructions. Then call this tool to persist the result. This is the only way a skill is saved — do not write files to the workspace and do not ask the user to copy/paste.",
   input_schema: {
     type: "object",
     properties: {
@@ -41,7 +41,7 @@ export const CREATE_SKILL_TOOL = {
 export const UPDATE_SKILL_TOOL = {
   name: "update_skill",
   description:
-    "Update an existing Skill the user already has by folding in a new standing preference. Call with the SAME name as that skill and the full revised description + instructions. This is the only way the update is persisted.",
+    "Update an existing Skill the user already has by folding in a new standing preference. BEFORE calling this, you MUST consult the skill-creator skill — read its SKILL.md (mounted in the container) and follow its methodology for revising a skill. Then call this tool with the SAME name as that skill and the full revised description + instructions. This is the only way the update is persisted.",
   input_schema: {
     type: "object",
     properties: {

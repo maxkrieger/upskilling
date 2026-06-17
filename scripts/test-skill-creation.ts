@@ -1,9 +1,10 @@
 /**
- * Test: when the user ASSENTS to a skill cue, the model uses the skill-creator
- * (mounted in the container) and EVENTUALLY persists the skill by calling the
- * create_skill tool. Multi-turn is allowed — if the model asks clarifying
- * questions first, we answer and continue; the test only requires that
- * create_skill is called within a few turns.
+ * Test: when the user ASSENTS to a skill cue, the model first CONSULTS the
+ * skill-creator skill (reads /skills/<slug>/SKILL.md — its tool descriptions
+ * require this) and THEN persists via the create_skill tool. Multi-turn is
+ * allowed — if the model asks clarifying questions first, we answer and continue.
+ * The test requires both: the skill-creator fired, and it fired BEFORE
+ * create_skill was called.
  *
  * Mirrors the real /api/chat assembly (same system prompt, container, tools).
  * Run: `npm run test:skill`.
@@ -17,6 +18,7 @@ import {
   getSkillCreatorRef,
   skillContainer,
   SKILLS_BETAS,
+  slugBase,
   UPDATE_SKILL_TOOL,
 } from "../server/skills.ts";
 
@@ -63,10 +65,17 @@ const SCENARIOS: Scenario[] = [
   },
 ];
 
-async function runScenario(s: Scenario, container: any, tools: any[]): Promise<boolean> {
+async function runScenario(
+  s: Scenario,
+  container: any,
+  tools: any[],
+  creatorSlug: string,
+): Promise<boolean> {
   const system = buildChatSystem({ profileName: s.profileName, profileRole: s.profileRole });
   const messages: any[] = s.messages.map((m) => ({ role: m.role, content: m.content }));
   let created: { name: string; description: string; instructions: string } | null = null;
+  let creatorFired = false;
+  let creatorFiredBeforeCreate = false;
 
   for (let attempt = 1; attempt <= 4 && !created; attempt++) {
     let text = "";
@@ -81,9 +90,16 @@ async function runScenario(s: Scenario, container: any, tools: any[]): Promise<b
         onText: (d) => {
           text += d;
         },
+        // The model read a mounted skill — note when it's the skill-creator.
+        onSkillFired: (slug) => {
+          if (slug === creatorSlug || slugBase(slug) === slugBase(creatorSlug)) creatorFired = true;
+        },
         // Record the persist call (don't actually register — keeps the org clean).
         onToolUse: async (name, input) => {
-          if (name === "create_skill") created = input;
+          if (name === "create_skill") {
+            created = input;
+            creatorFiredBeforeCreate = creatorFired; // must have fired first
+          }
           return `Saved. "${input?.name}" is active.`;
         },
       },
@@ -102,11 +118,18 @@ async function runScenario(s: Scenario, container: any, tools: any[]): Promise<b
     console.log(`  ✗ ${s.name}: create_skill was NOT called within 4 turns`);
     return false;
   }
+  if (!creatorFiredBeforeCreate) {
+    console.log(
+      `  ✗ ${s.name}: create_skill was called WITHOUT the skill-creator firing first` +
+        ` (creatorFired=${creatorFired})`,
+    );
+    return false;
+  }
   const c = created as { name: string; description: string; instructions: string };
   const hay = `${c.name} ${c.description} ${c.instructions}`.toLowerCase();
   const missing = s.expectKeys.filter((k) => !hay.includes(k.toLowerCase()));
   console.log(
-    `  ✓ ${s.name}: create_skill called → "${c.name}"` +
+    `  ✓ ${s.name}: skill-creator fired → create_skill "${c.name}"` +
       (missing.length ? ` (note: missing keys ${missing.join(", ")})` : " (captured all key prefs)"),
   );
   return true;
@@ -122,13 +145,15 @@ async function main() {
   try {
     for (const s of SCENARIOS) {
       console.log(`\n### ${s.name}`);
-      if (await runScenario(s, container, tools)) pass++;
+      if (await runScenario(s, container, tools, creatorRef.slug)) pass++;
     }
   } finally {
     await deleteSkillRemote(creatorRef.skill_id);
   }
 
-  console.log(`\n==== ${pass}/${SCENARIOS.length} cue-assent flows persisted via create_skill ====`);
+  console.log(
+    `\n==== ${pass}/${SCENARIOS.length} cue-assent flows: skill-creator fired then persisted via create_skill ====`,
+  );
   if (pass < SCENARIOS.length) process.exit(1);
 }
 
