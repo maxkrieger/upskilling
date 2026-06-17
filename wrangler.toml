@@ -6,3 +6,8 @@ compatibility_date = "2024-11-01"
 # nodejs_compat provides node built-ins (and lets functions/api bridge env to
 # process.env). Required because the app uses some node:* imports indirectly.
 compatibility_flags = ["nodejs_compat"]
+
+# Non-secret runtime vars (secrets are set via `wrangler pages secret put`).
+# NODE_ENV=production makes the auth cookie Secure and enables Discord alerts.
+[vars]
+NODE_ENV = "production"

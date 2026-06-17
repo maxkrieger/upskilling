@@ -10,6 +10,17 @@ export interface ErrorContext {
 const RED = 0xe74c3c;
 const truncate = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1) + "…" : s);
 
+/**
+ * Strip anything that looks like a secret before shipping text to an external
+ * service. Defense-in-depth: error stacks/messages should never carry an API
+ * key, the webhook URL, or the session secret into the Discord channel.
+ */
+const redact = (s: string): string =>
+  s
+    .replace(/sk-ant-[A-Za-z0-9_-]+/g, "sk-ant-***")
+    .replace(/(discord(?:app)?\.com\/api\/webhooks\/)[^\s"')]+/gi, "$1***")
+    .replace(/\b[A-Fa-f0-9]{48,}\b/g, "***"); // session secret / HMAC token (hex)
+
 /** Simple dedupe so a hot error loop doesn't flood the channel. */
 const recent = new Map<string, number>();
 const DEDUPE_MS = 60_000;
@@ -41,15 +52,15 @@ export async function reportError(
     { name: "Source", value: ctx.source, inline: true },
     ...Object.entries(ctx.details ?? {})
       .filter(([, v]) => v != null && v !== "")
-      .map(([name, value]) => ({ name, value: truncate(String(value), 1024), inline: true })),
+      .map(([name, value]) => ({ name, value: truncate(redact(String(value)), 1024), inline: true })),
   ];
 
   const body = {
     username: "Upskilling Alerts",
     embeds: [
       {
-        title: truncate(`🛑 ${err.name}: ${err.message}`, 256),
-        description: err.stack ? "```\n" + truncate(err.stack, 1800) + "\n```" : undefined,
+        title: truncate(redact(`🛑 ${err.name}: ${err.message}`), 256),
+        description: err.stack ? "```\n" + truncate(redact(err.stack), 1800) + "\n```" : undefined,
         color: RED,
         fields,
         timestamp: new Date().toISOString(),

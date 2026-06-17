@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import type { Context } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
 import { streamSSE } from "hono/streaming";
 import { ENV } from "./env.ts";
@@ -41,6 +42,19 @@ const app = new Hono();
 // requests should get no CORS grant. (A wide-open `cors()` would needlessly
 // expose the API to other origins.)
 
+// Keep a fire-and-forget telemetry promise (e.g. a Discord alert) alive past the
+// response. On the Workers runtime, pending async work is cancelled once the
+// response returns unless registered with executionCtx.waitUntil — so a bare
+// `void reportError(...)` would silently never deliver in production. In Node
+// dev there's no executionCtx; the event loop keeps the promise alive anyway.
+function keepAlive(c: Context, p: Promise<unknown>): void {
+  try {
+    c.executionCtx.waitUntil(p);
+  } catch {
+    void p;
+  }
+}
+
 // The auth cookie holds an HMAC token (not the password), signed with
 // SESSION_SECRET (falling back to the demo password). HttpOnly so XSS can't read
 // it; the browser auto-sends it on every same-origin /api request.
@@ -71,9 +85,9 @@ app.use("/api/*", async (c, next) => {
 
 // Global handler: any uncaught route error is alerted to Discord and returns 500.
 app.onError((err, c) => {
-  void reportError(err, {
+  keepAlive(c, reportError(err, {
     source: `${c.req.method} ${new URL(c.req.url).pathname}`,
-  });
+  }));
   console.error("[api] unhandled error:", err);
   return c.json({ error: "internal_error" }, 500);
 });
@@ -93,7 +107,7 @@ app.post("/api/report-error", async (c) => {
   const err = new Error(body.message || "Unknown client error");
   err.name = body.kind ? `ClientError(${body.kind})` : "ClientError";
   if (body.stack) err.stack = body.stack;
-  await reportError(err, { source: "client", details: { url: body.url } });
+  keepAlive(c, reportError(err, { source: "client", details: { url: body.url } }));
   return c.json({ ok: true });
 });
 
@@ -166,7 +180,7 @@ app.post("/api/chat", async (c) => {
     }
   } catch (err) {
     console.error("[cue] failed:", err);
-    void reportError(err, { source: "POST /api/chat (cue decider)" });
+    keepAlive(c, reportError(err, { source: "POST /api/chat (cue decider)" }));
   }
 
   const meta: ChatMeta = {
@@ -188,7 +202,7 @@ app.post("/api/chat", async (c) => {
     creatorRef = await getSkillCreatorRef();
   } catch (err) {
     console.error("[chat] skill-creator registration failed:", err);
-    void reportError(err, { source: "POST /api/chat (skill-creator register)" });
+    keepAlive(c, reportError(err, { source: "POST /api/chat (skill-creator register)" }));
   }
   const container = skillContainer(body.skills ?? [], creatorRef);
   const tools: any[] = [CODE_EXECUTION_TOOL, CREATE_SKILL_TOOL, UPDATE_SKILL_TOOL];
@@ -306,7 +320,7 @@ app.post("/api/chat", async (c) => {
             } catch (e) {
               console.error(`[chat] ${name} failed:`, e);
               tr.log("tool.error", { name, message: (e as Error).message });
-              void reportError(e, { source: `POST /api/chat (${name})` });
+              keepAlive(c, reportError(e, { source: `POST /api/chat (${name})` }));
               return `Failed to save the skill: ${(e as Error).message}`;
             }
           },
@@ -316,7 +330,7 @@ app.post("/api/chat", async (c) => {
     } catch (err) {
       console.error("[chat] stream error:", err);
       tr.log("stream.error", { message: (err as Error).message });
-      void reportError(err, { source: "POST /api/chat (stream)", details: { profile: body.profileId } });
+      keepAlive(c, reportError(err, { source: "POST /api/chat (stream)", details: { profile: body.profileId } }));
       await stream.writeSSE({
         event: "error",
         data: JSON.stringify({ message: (err as Error).message }),
