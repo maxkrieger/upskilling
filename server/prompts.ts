@@ -124,10 +124,12 @@ export function buildCueUser(params: {
   return `Decide whether to cue the user about a Skill, based on their NEW message, their workflow history, and their active skills. Pick exactly one of: create, update, or neither.
 
 CREATE — cue ONLY if ALL hold:
-1. The new message is a workflow the user has done at least once before (matches a set's cluster below).
+1. The new message repeats a workflow the user has done at least once before — matching a set's cluster below. A prior occurrence counts whether it was in an earlier conversation OR earlier in the CURRENT conversation (the index may hold a set for the conversation in progress).
 2. The know-how is cleanly capturable as a Skill.
 3. No active skill already covers it and the set's status is "none".
 Return kind="create" with workflowSetId, suggestedName, preferences, trigger.
+
+DISTINCT instances vs. REFINEMENT (this decides rule 1): the new message must be a NEW, DISTINCT instance of the workflow — a different document, dataset, or asset run through the same routine (e.g. a second, different NDA; a caption for a different artwork). A fresh top-level request to perform the workflow ("review this NDA", "make a bar chart of X", "write a caption for this piece") is by default a distinct instance — even if the document/data isn't shown inline. ONLY treat it as REFINEMENT — and do NOT cue — when the message is clearly a follow-up edit to an artifact ALREADY produced earlier in this conversation: it tweaks or adds constraints to that same in-progress chart/doc/caption with no new subject ("also drop the gridlines", "also flag IP clauses", "actually make it shorter", "change the colors"). Refining one instance is not repetition.
 
 UPDATE — cue ONLY if ALL hold:
 1. The new message clearly falls in the domain of one of the ACTIVE skills below.

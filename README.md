@@ -130,9 +130,9 @@ Verify the wiring with `node scripts/test-discord.mjs` (sends one test alert).
 ## Models
 
 - Chat: `claude-opus-4-8` (streaming)
-- Cueing / extraction: `claude-haiku-4-5` (fast classification)
+- Cueing / extraction: `claude-sonnet-4-6` (background classification)
 
-Override via `ANTHROPIC_MODEL` / `ANTHROPIC_MODEL_FAST` in `.env`.
+Override via `ANTHROPIC_MODEL` / `ANTHROPIC_MODEL_BACKGROUND` in `.env`.
 
 ## Notes / scope
 

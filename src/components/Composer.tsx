@@ -130,6 +130,7 @@ export function Composer({ showPresets }: { showPresets: boolean }) {
           onChange={(e) => onFiles(e.target.files)}
         />
         <textarea
+          autoFocus
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => {

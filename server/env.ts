@@ -7,8 +7,9 @@ export const ENV = {
   WEBSITE_DEMO_PASSWORD: process.env.WEBSITE_DEMO_PASSWORD ?? "",
   // Capable model for user-facing chat.
   MODEL_MAIN: process.env.ANTHROPIC_MODEL ?? "claude-opus-4-8",
-  // Fast model for background classification (cueing, extraction).
-  MODEL_FAST: process.env.ANTHROPIC_MODEL_FAST ?? "claude-haiku-4-5-20251001",
+  // Model for background jobs (cueing decider, extraction). Sonnet — haiku was
+  // too inconsistent on the cueing classification to rely on.
+  MODEL_BACKGROUND: process.env.ANTHROPIC_MODEL_BACKGROUND ?? "claude-sonnet-4-6",
   API_PORT: Number(process.env.API_PORT ?? 8787),
   // Runtime error alerting.
   DISCORD_WEBHOOK_URL: process.env.DISCORD_WEBHOOK_URL ?? "",

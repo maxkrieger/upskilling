@@ -27,6 +27,22 @@ function indexWith(profileId: string, patch?: (sets: WorkflowSet[]) => void): Wo
   return sets;
 }
 
+/** A single-member workflow set — represents one workflow seen so far (e.g. the
+ * current conversation, extracted per-turn) with no prior-conversation history. */
+function oneMember(
+  cluster: string,
+  conversationId: string,
+  m: { summary: string; quotes: string[] },
+): WorkflowSet {
+  return {
+    id: `wf_${cluster}`,
+    cluster,
+    cueStatus: "none",
+    members: [{ conversationId, cluster, summary: m.summary, quotes: m.quotes }],
+    updatedAt: "2026-06-15T00:00:00.000Z",
+  };
+}
+
 export const CUE_CASES: CueCase[] = [
   // ---- Positives: matches an overdue (>=2 member) cluster, status none ----
   {
@@ -117,6 +133,58 @@ export const CUE_CASES: CueCase[] = [
     profileId: "analyst",
     userMessage: "Write a SQL query to compute 7-day retention from an events table.",
     index: [],
+    expectCue: false,
+  },
+
+  // ---- Intra-conversation repetition --------------------------------------
+  // No prior-conversation history. The current conversation has been extracted
+  // per-turn into a single 1-member set. The decider must fire when a SECOND
+  // DISTINCT workflow instance appears in the same conversation, but stay quiet
+  // when the user is merely refining the one workflow in progress.
+  {
+    name: "lawyer/second DISTINCT NDA in same convo -> cue",
+    profileId: "lawyer",
+    userMessage:
+      "Different one now — here's the NDA from the design contractor we're onboarding. Can you review this one too?",
+    index: [oneMember("nda-review", "c_cur_lawyer", {
+      summary:
+        "Earlier in this same conversation, reviewed an inbound NDA from a vendor (Acme): wanted it mutual, CA or DE governing law, and flags plus required edits.",
+      quotes: ["make it mutual", "California or Delaware", "flag off-market terms"],
+    })],
+    expectCue: true,
+  },
+  {
+    name: "social/second DISTINCT artwork caption in same convo -> cue",
+    profileId: "social",
+    userMessage:
+      "Great. Now write one for a different piece — a bronze sculpture, \"Aftermath\" by Ines Kovac, 2021.",
+    index: [oneMember("instagram-art-caption", "c_cur_social", {
+      summary:
+        "Earlier in this same conversation, wrote an Instagram caption for an oil painting, with a highbrow voice and no em dashes.",
+      quotes: ["highbrow audience", "no em dashes", "relevant hashtags"],
+    })],
+    expectCue: true,
+  },
+  {
+    name: "analyst/refining the SAME chart in convo (add constraints) -> no cue",
+    profileId: "analyst",
+    userMessage: "Actually, drop the gridlines on that and sort the bars descending.",
+    index: [oneMember("deck-bar-charts", "c_cur_analyst", {
+      summary:
+        "In this conversation, built a bar chart of revenue by product for the QBR deck.",
+      quotes: ["bar chart of revenue by product", "for the QBR deck"],
+    })],
+    expectCue: false,
+  },
+  {
+    name: "lawyer/refining the SAME NDA in convo (add a check) -> no cue",
+    profileId: "lawyer",
+    userMessage: "Also flag any IP assignment clauses in it while you're at it.",
+    index: [oneMember("nda-review", "c_cur_lawyer", {
+      summary:
+        "In this conversation, reviewing one inbound NDA from a vendor: mutual, CA or DE, flags plus required edits.",
+      quotes: ["make it mutual", "California or Delaware"],
+    })],
     expectCue: false,
   },
 ];

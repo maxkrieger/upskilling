@@ -22,7 +22,7 @@ export interface JsonCallOptions {
  */
 export async function jsonCall<T>(opts: JsonCallOptions): Promise<T> {
   const res = await anthropic.messages.create({
-    model: opts.model ?? ENV.MODEL_FAST,
+    model: opts.model ?? ENV.MODEL_BACKGROUND,
     max_tokens: opts.maxTokens ?? 1500,
     system: opts.system,
     tools: [

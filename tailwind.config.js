@@ -21,6 +21,15 @@ export default {
         sans: ["ui-sans-serif", "system-ui", "-apple-system", "Segoe UI", "sans-serif"],
         serif: ["Georgia", "ui-serif", "serif"],
       },
+      keyframes: {
+        "rise-in": {
+          "0%": { opacity: "0", transform: "translateY(8px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+      },
+      animation: {
+        "rise-in": "rise-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) both",
+      },
     },
   },
   plugins: [],

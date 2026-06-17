@@ -78,7 +78,7 @@ export function SkillBanner({
   };
 
   return (
-    <div className="mt-3 rounded-2xl border border-border bg-surface p-4 shadow-sm">
+    <div className="mt-3 animate-rise-in rounded-2xl border border-border bg-surface p-4 shadow-sm">
       <div className="flex items-center gap-3">
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-peach text-accent">
           <BookOpen size={20} />
