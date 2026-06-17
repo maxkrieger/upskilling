@@ -244,8 +244,8 @@ export const useStore = create<State>()(
               let setId: string | undefined;
               let setKind: string | undefined;
               writeConvos((c) => {
-                // Prefer the exact banner whose button was pressed; otherwise the
-                // most recent pending one (freeform "make the skill" with no button).
+                // Consume the cue banner that prompted this — don't expand it in
+                // place; the result shows as a new card on the followup turn.
                 const targetId = opts?.resolveBannerMessageId;
                 for (let i = c.messages.length - 1; i >= 0; i--) {
                   const b = c.messages[i].banner;
@@ -253,10 +253,19 @@ export const useStore = create<State>()(
                   if (b && match) {
                     setId = b.workflowSetId;
                     setKind = b.kind;
-                    // Link the created/updated skill so the banner can render its card.
-                    c.messages[i] = { ...c.messages[i], banner: { ...b, status: "accepted", createdSkillId: storedId } };
+                    c.messages[i] = { ...c.messages[i], banner: undefined };
                     break;
                   }
+                }
+                // Attach the "created/updated" result card to this followup reply.
+                const am = c.messages.find((m) => m.id === assistantMsg.id);
+                if (am) {
+                  am.banner = {
+                    kind,
+                    status: "accepted",
+                    createdSkillId: storedId,
+                    suggestedName: skill.name,
+                  };
                 }
               });
               if (setKind === "create" && setId) {
@@ -283,11 +292,12 @@ export const useStore = create<State>()(
           },
         );
 
-        // Attach the cue banner now that the full reply has streamed in.
+        // Attach the cue banner now that the full reply has streamed in — unless
+        // this turn already produced a result card (onSkill set the banner).
         if (pendingBanner) {
           writeConvos((c) => {
             const am = c.messages.find((m) => m.id === assistantMsg.id);
-            if (am) am.banner = pendingBanner;
+            if (am && !am.banner) am.banner = pendingBanner;
           });
         }
 

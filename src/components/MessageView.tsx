@@ -53,9 +53,17 @@ export function MessageView({
     );
   }
 
+  // The "created/updated" result card sits ABOVE the reply text; a pending cue
+  // CTA sits below the deliverable.
+  const showBanner = message.banner && !streaming;
+  const cardAbove = showBanner && message.banner!.status === "accepted";
+
   return (
     <div className="flex">
       <div className="min-w-0 flex-1">
+        {cardAbove && (
+          <SkillBanner banner={message.banner!} conversationId={conversationId} messageId={message.id} />
+        )}
         {message.content ? (
           <Markdown content={message.content} />
         ) : streaming ? (
@@ -68,9 +76,9 @@ export function MessageView({
           <ThinkingGlyph fixedWidth={false} className="align-middle text-accent" />
         )}
 
-        {message.banner && !streaming && (
+        {showBanner && !cardAbove && (
           <SkillBanner
-            banner={message.banner}
+            banner={message.banner!}
             conversationId={conversationId}
             messageId={message.id}
           />

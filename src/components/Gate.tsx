@@ -24,10 +24,9 @@ export function Gate() {
         <div className="mb-1 flex justify-center text-accent">
           <Asterisk size={32} />
         </div>
-        <h1 className="text-center font-serif text-2xl text-ink">Upskilling</h1>
-        <p className="mt-1 text-center text-sm text-muted">
-          Skills, discovered in your context of use.
-        </p>
+        <h1 className="text-center font-serif text-2xl text-ink">
+          Upskilling Demo
+        </h1>
         <div className="mt-6 space-y-3">
           <input
             type="password"
