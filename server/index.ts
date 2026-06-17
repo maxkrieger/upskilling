@@ -1,3 +1,5 @@
+import { realpathSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
@@ -370,8 +372,23 @@ process.on("uncaughtException", (err) => {
   void reportError(err, { source: "process.uncaughtException" });
 });
 
-serve({ fetch: app.fetch, port: ENV.API_PORT }, (info) => {
-  console.log(`[api] listening on http://localhost:${info.port} (model: ${ENV.MODEL_MAIN})`);
-});
+// Only start a listening server when run directly (e.g. `tsx server/index.ts`),
+// not when imported for tests (which drive the app via `app.fetch`). Compare
+// real paths so a relative argv or a /tmp→/private/tmp symlink doesn't fool it.
+function runningDirectly(): boolean {
+  try {
+    return (
+      !!process.argv[1] &&
+      realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))
+    );
+  } catch {
+    return false;
+  }
+}
+if (runningDirectly()) {
+  serve({ fetch: app.fetch, port: ENV.API_PORT }, (info) => {
+    console.log(`[api] listening on http://localhost:${info.port} (model: ${ENV.MODEL_MAIN})`);
+  });
+}
 
 export default app;

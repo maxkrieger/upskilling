@@ -165,13 +165,77 @@ async function evalCueing() {
   return { rows, metrics: { tp, fp, fn, tn, precision, recall, f1, accuracy } };
 }
 
-/** Check that a generated skill captures the workflow's key preference terms. */
+const COVERAGE_SCHEMA = {
+  type: "object",
+  properties: {
+    verdicts: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          concept: { type: "string" },
+          captured: { type: "boolean" },
+          evidence: { type: "string", description: "Brief quote/paraphrase from the skill, or why it's missing." },
+        },
+        required: ["concept", "captured", "evidence"],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ["verdicts"],
+  additionalProperties: false,
+} as const;
+
+/** Judge (semantically, paraphrase-tolerant) whether a skill captures each concept. */
+async function judgeConceptCoverage(
+  skillText: string,
+  concepts: string[],
+): Promise<Array<{ concept: string; captured: boolean }>> {
+  const res = await jsonCall<{ verdicts: Array<{ concept: string; captured: boolean }> }>({
+    system:
+      "You judge whether a Skill's instructions capture each required behavior/preference. Match on MEANING, not exact words — a faithful paraphrase counts as captured. Be strict only about whether the behavior is actually specified.",
+    user: `## Skill\n${skillText}\n\n## Concepts to check\n${concepts
+      .map((c, i) => `${i + 1}. ${c}`)
+      .join("\n")}\n\nFor each concept, decide if the skill captures it (paraphrase is fine).`,
+    schema: COVERAGE_SCHEMA as unknown as Record<string, unknown>,
+  });
+  return res.verdicts ?? [];
+}
+
+/** Check that a generated skill captures the workflow's key preferences (semantic). */
 async function evalSkillQuality() {
-  console.log("\n=== Skill quality (key-preference coverage) ===");
+  console.log("\n=== Skill quality (semantic concept coverage) ===");
   const targets = [
-    { profileId: "analyst", cluster: "deck-bar-charts", keys: ["gridlin", "legend", "sort", "palette"] },
-    { profileId: "lawyer", cluster: "nda-review", keys: ["mutual", "non-solicit", "off-market", "edit"] },
-    { profileId: "social", cluster: "instagram-art-caption", keys: ["hashtag", "em dash", "highbrow", "grandi"] },
+    {
+      profileId: "analyst",
+      cluster: "deck-bar-charts",
+      concepts: [
+        "bars sorted in descending order",
+        "no gridlines",
+        "no legend",
+        "the company palette starting with the clay-orange #d97757",
+      ],
+    },
+    {
+      profileId: "lawyer",
+      cluster: "nda-review",
+      concepts: [
+        "NDAs must be mutual",
+        "governing law limited to California or Delaware",
+        "no non-solicit riders",
+        "output flags + required edits rather than a clause-by-clause table",
+      ],
+    },
+    {
+      profileId: "social",
+      cluster: "instagram-art-caption",
+      concepts: [
+        "include relevant hashtags",
+        "no em dashes",
+        "a highbrow / sophisticated audience voice",
+        "avoid LLM grandiosity / slop",
+      ],
+    },
   ];
 
   const out: Array<{ cluster: string; coverage: number; missing: string[] }> = [];
@@ -186,17 +250,18 @@ async function evalSkillQuality() {
       user: buildSkillCreatorUser({ workflowSet: wfSet, conversations }),
       schema: SKILL_SCHEMA as unknown as Record<string, unknown>,
     });
-    const hay = (skill.name + " " + skill.description + " " + skill.instructions).toLowerCase();
-    const missing = t.keys.filter((k) => !hay.includes(k));
-    const coverage = (t.keys.length - missing.length) / t.keys.length;
+    const skillText = `${skill.name}\n${skill.description}\n${skill.instructions}`;
+    const verdicts = await judgeConceptCoverage(skillText, t.concepts);
+    const missing = verdicts.filter((v) => !v.captured).map((v) => v.concept);
+    const coverage = (t.concepts.length - missing.length) / t.concepts.length;
     out.push({ cluster: t.cluster, coverage, missing });
     console.log(
       `  ${coverage === 1 ? "✓" : "△"} ${t.cluster}: coverage=${coverage.toFixed(2)} "${skill.name}"` +
-        (missing.length ? ` (missing: ${missing.join(", ")})` : ""),
+        (missing.length ? ` (missing: ${missing.join("; ")})` : ""),
     );
   }
   const avg = out.reduce((a, b) => a + b.coverage, 0) / out.length;
-  console.log(`\n  avg key-preference coverage=${avg.toFixed(3)}`);
+  console.log(`\n  avg concept coverage=${avg.toFixed(3)}`);
   return { skills: out, avgCoverage: avg };
 }
 

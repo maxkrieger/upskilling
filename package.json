@@ -12,6 +12,7 @@
     "preview": "vite preview",
     "eval": "tsx scripts/eval.ts",
     "test:skill": "tsx scripts/test-skill-creation.ts",
+    "test:http": "tsx scripts/test-http.ts",
     "extract:offline": "tsx scripts/extract-profiles.ts",
     "cleanup:agents": "tsx scripts/cleanup-agents.ts",
     "smoke": "node scripts/smoke.mjs",
