@@ -232,6 +232,7 @@ export const useStore = create<State>()(
             // The model created/updated a skill via tool call — persist it and
             // resolve the most recent pending cue banner in this conversation.
             onSkill: ({ skill, kind, replacesLocalId }) => {
+              const storedId = kind === "update" && replacesLocalId ? replacesLocalId : skill.id;
               set((s) => {
                 const cur = s.skillsByProfile[pid] ?? BUILTIN_SKILLS;
                 const next =
@@ -252,7 +253,8 @@ export const useStore = create<State>()(
                   if (b && match) {
                     setId = b.workflowSetId;
                     setKind = b.kind;
-                    c.messages[i] = { ...c.messages[i], banner: { ...b, status: "accepted" } };
+                    // Link the created/updated skill so the banner can render its card.
+                    c.messages[i] = { ...c.messages[i], banner: { ...b, status: "accepted", createdSkillId: storedId } };
                     break;
                   }
                 }

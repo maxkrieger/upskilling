@@ -127,6 +127,11 @@ async function main() {
       JSON.stringify(skillEv?.data?.skill ?? null).slice(0, 200),
     );
     check(
+      "SSE: created skill carries capability highlights (for the card)",
+      Array.isArray(skillEv?.data?.skill?.highlights) && skillEv.data.skill.highlights.length > 0,
+      JSON.stringify(skillEv?.data?.skill?.highlights),
+    );
+    check(
       "SSE: applied event reports the skill-creator as used (shown in the UI)",
       Array.isArray(applied?.data?.ids) && applied.data.ids.includes("skill_creator_builtin"),
       JSON.stringify(applied?.data),

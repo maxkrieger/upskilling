@@ -252,6 +252,7 @@ app.post("/api/chat", async (c) => {
                   createdAt: new Date().toISOString(),
                   skillId: reg.skillId,
                   skillVersion: reg.skillVersion,
+                  highlights: Array.isArray(input.highlights) ? input.highlights.slice(0, 4) : [],
                 };
                 skill.slug = reg.slug;
                 await stream.writeSSE({ event: "skill", data: JSON.stringify({ skill, kind: "create" }) });
@@ -272,6 +273,7 @@ app.post("/api/chat", async (c) => {
                   description: input.description,
                   instructions: input.instructions,
                   skillVersion: reg.skillVersion,
+                  highlights: Array.isArray(input.highlights) ? input.highlights.slice(0, 4) : target.highlights,
                 };
                 await stream.writeSSE({
                   event: "skill",

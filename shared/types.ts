@@ -53,6 +53,9 @@ export interface SkillCueBanner {
   /** create only: when the skill applies (the trigger condition). */
   trigger?: string;
   status: "pending" | "accepted" | "dismissed" | "snoozed";
+  /** Set once accepted: the local id of the skill that was created/updated, so
+   * the banner can render its name/description/highlights. */
+  createdSkillId?: string;
 }
 
 export interface Message {
@@ -139,6 +142,9 @@ export interface Skill {
   slug?: string;
   /** Times this skill has actually fired (loaded) in a response. */
   fireCount?: number;
+  /** A few short capability bullets (what the skill does), shown on the created
+   * banner and authored by the model when it calls create_skill/update_skill. */
+  highlights?: string[];
 }
 
 // ---- Profiles (seeded demo personae) ----

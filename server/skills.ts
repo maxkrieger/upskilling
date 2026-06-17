@@ -32,8 +32,14 @@ export const CREATE_SKILL_TOOL = {
         type: "string",
         description: "The SKILL.md body: imperative steps and the preferences to apply automatically.",
       },
+      highlights: {
+        type: "array",
+        items: { type: "string" },
+        description:
+          "2-4 very short bullets (a few words each) of what the skill does/applies — shown to the user as a capability checklist. E.g. \"Apply company palette\", \"Remove gridlines + legend\", \"Sort bars descending\".",
+      },
     },
-    required: ["name", "description", "instructions"],
+    required: ["name", "description", "instructions", "highlights"],
   },
 };
 
@@ -48,8 +54,13 @@ export const UPDATE_SKILL_TOOL = {
       name: { type: "string", description: "The existing skill's name (unchanged)." },
       description: { type: "string", description: "Revised description (still task-based trigger)." },
       instructions: { type: "string", description: "Full revised SKILL.md body, keeping prior behavior + the new preference." },
+      highlights: {
+        type: "array",
+        items: { type: "string" },
+        description: "2-4 very short capability bullets for the updated skill (a few words each), including the newly added behavior.",
+      },
     },
-    required: ["name", "description", "instructions"],
+    required: ["name", "description", "instructions", "highlights"],
   },
 };
 
