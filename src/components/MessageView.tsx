@@ -53,35 +53,43 @@ export function MessageView({
     );
   }
 
-  // The "created/updated" result card sits ABOVE the reply text; a pending cue
-  // CTA sits below the deliverable.
+  // An accepted result card is spliced inline at the tool-use point; a pending
+  // cue CTA sits below the deliverable.
   const showBanner = message.banner && !streaming;
-  const cardAbove = showBanner && message.banner!.status === "accepted";
+  const isCard = showBanner && message.banner!.status === "accepted";
+  const splitAt = isCard ? Math.min(message.cardSplitAt ?? 0, message.content.length) : 0;
+  const card = (
+    <SkillBanner banner={message.banner!} conversationId={conversationId} messageId={message.id} />
+  );
 
   return (
     <div className="flex">
       <div className="min-w-0 flex-1">
-        {cardAbove && (
-          <SkillBanner banner={message.banner!} conversationId={conversationId} messageId={message.id} />
-        )}
-        {message.content ? (
-          <Markdown content={message.content} />
-        ) : streaming ? (
-          <div className="flex items-center gap-2 text-muted">
-            <ThinkingGlyph className="text-lg text-accent" />
-            <span>Working…</span>
-          </div>
-        ) : null}
-        {streaming && message.content && (
-          <ThinkingGlyph fixedWidth={false} className="align-middle text-accent" />
-        )}
-
-        {showBanner && !cardAbove && (
-          <SkillBanner
-            banner={message.banner!}
-            conversationId={conversationId}
-            messageId={message.id}
-          />
+        {isCard ? (
+          <>
+            {message.content.slice(0, splitAt).trim() && (
+              <Markdown content={message.content.slice(0, splitAt)} />
+            )}
+            {card}
+            {message.content.slice(splitAt).trim() && (
+              <Markdown content={message.content.slice(splitAt)} />
+            )}
+          </>
+        ) : (
+          <>
+            {message.content ? (
+              <Markdown content={message.content} />
+            ) : streaming ? (
+              <div className="flex items-center gap-2 text-muted">
+                <ThinkingGlyph className="text-lg text-accent" />
+                <span>Working…</span>
+              </div>
+            ) : null}
+            {streaming && message.content && (
+              <ThinkingGlyph fixedWidth={false} className="align-middle text-accent" />
+            )}
+            {showBanner && card}
+          </>
         )}
 
         {applied.length > 0 && (

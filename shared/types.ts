@@ -65,6 +65,10 @@ export interface Message {
   attachments?: Attachment[];
   chart?: ChartSpec;
   banner?: SkillCueBanner;
+  /** For an accepted result-card banner: the content offset at which the skill
+   * tool fired, so the card is spliced inline there (between the pre- and
+   * post-tool text) rather than rendered above the whole reply. */
+  cardSplitAt?: number;
   /** Which skill ids were applied to produce this message, if any. */
   appliedSkillIds?: string[];
   createdAt: string; // ISO

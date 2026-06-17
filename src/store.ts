@@ -257,9 +257,11 @@ export const useStore = create<State>()(
                     break;
                   }
                 }
-                // Attach the "created/updated" result card to this followup reply.
+                // Attach the "created/updated" result card to this followup reply,
+                // spliced at the point the tool fired (current content length).
                 const am = c.messages.find((m) => m.id === assistantMsg.id);
                 if (am) {
+                  am.cardSplitAt = am.content.length;
                   am.banner = {
                     kind,
                     status: "accepted",
