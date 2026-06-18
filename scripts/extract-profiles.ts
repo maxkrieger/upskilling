@@ -7,7 +7,7 @@
  */
 import { writeFile, mkdir } from "node:fs/promises";
 import { jsonCall } from "../server/anthropic.ts";
-import { buildExtractUser, EXTRACT_SCHEMA } from "../server/prompts.ts";
+import { buildExtractUser, EXTRACT_SCHEMA, EXTRACT_SYSTEM } from "../server/prompts.ts";
 import { conversationToText, id } from "../server/util.ts";
 import { PROFILES } from "../src/data/index.ts";
 import type { WorkflowSet, WorkflowSummary } from "../shared/types.ts";
@@ -23,8 +23,7 @@ async function extractProfile(profileId: string) {
       cluster: string;
       isWorkflow: boolean;
     }>({
-      system:
-        "You extract reusable workflow descriptions from conversations, quoting the user's specific preferences verbatim.",
+      system: EXTRACT_SYSTEM,
       user: buildExtractUser({
         conversationText: conversationToText(convo),
         existingClusters: [...new Set(sets.map((s) => s.cluster))],

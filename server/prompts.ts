@@ -6,6 +6,12 @@ import { SKILL_CREATOR_MD } from "./generated/skillCreator.ts";
 /** The bundled skill-creator skill's own instructions (the source of truth). */
 const SKILL_CREATOR_GUIDE = SKILL_CREATOR_MD;
 
+/** Generic tool used by jsonCall to force a structured (schema-shaped) reply. */
+export const JSON_RESPONSE_TOOL = {
+  name: "respond",
+  description: "Return the structured response.",
+} as const;
+
 export const CHART_INSTRUCTIONS = `When the user asks for a chart, graph, or visualization, emit a fenced code block with the language tag \`chart\` containing JSON of this shape:
 \`\`\`chart
 {
@@ -56,6 +62,9 @@ export function updateOperatorNote(params: { skillName: string; newCriterion: st
 }
 
 // ---- Cueing decider (create a new skill, or update an existing one) ----
+
+export const CUE_SYSTEM =
+  "You are a precise classifier for Skill suggestions. Favor precision over recall: only cue on clear prior repetition (create) or a clear new standing preference for an existing skill (update).";
 
 export const CUE_SCHEMA = {
   type: "object",
@@ -151,6 +160,9 @@ ${params.userMessage}
 
 // ---- Workflow extraction ----
 
+export const EXTRACT_SYSTEM =
+  "You extract reusable workflow descriptions from conversations, quoting the user's specific preferences verbatim.";
+
 export const EXTRACT_SCHEMA = {
   type: "object",
   properties: {
@@ -212,6 +224,61 @@ export const SKILL_SCHEMA = {
   required: ["name", "description", "instructions"],
   additionalProperties: false,
 } as const;
+
+// ---- Client tools the chat model calls to persist skills (the ONLY way to
+//      save). Centralized here with the other model-facing prompt strings;
+//      server/skills.ts attaches them to the chat request. ----
+export const CREATE_SKILL_TOOL = {
+  name: "create_skill",
+  description:
+    "Save a new Skill so the user's preferences apply automatically next time. BEFORE calling this, you MUST consult the skill-creator skill — read its SKILL.md (it is mounted in the container) and follow its authoring methodology to shape the name, description, and instructions. Then call this tool to persist the result. This is the only way a skill is saved — do not write files to the workspace and do not ask the user to copy/paste.",
+  input_schema: {
+    type: "object",
+    properties: {
+      name: { type: "string", description: "Short Title-case skill name." },
+      description: {
+        type: "string",
+        description:
+          "What it does + WHEN it should trigger. Trigger on the recurring TASK/intent (its subject and context), broad enough to fire even when the user phrases the request minimally and omits every preference — just the ask plus its data — yet specific enough that unrelated requests don't match. Before finalizing, mentally test a few varied future phrasings of this task (including terse, preference-free ones) to confirm they'd trigger, plus a couple of unrelated asks to confirm they wouldn't, and refine the wording for that balance. Never restate the user's preferences as the trigger, and never tailor it to specific example prompts.",
+      },
+      instructions: {
+        type: "string",
+        description: "The SKILL.md body: imperative steps and the preferences to apply automatically.",
+      },
+      highlights: {
+        type: "array",
+        items: { type: "string" },
+        description:
+          "2-4 very short bullets (a few words each) of the concrete defaults the skill applies automatically — shown to the user as a capability checklist.",
+      },
+    },
+    required: ["name", "description", "instructions", "highlights"],
+  },
+};
+
+export const UPDATE_SKILL_TOOL = {
+  name: "update_skill",
+  description:
+    "Update an existing Skill the user already has by folding in a new standing preference. BEFORE calling this, you MUST consult the skill-creator skill — read its SKILL.md (mounted in the container) and follow its methodology for revising a skill. Then call this tool with the SAME name as that skill and the full revised description + instructions. This is the only way the update is persisted.",
+  input_schema: {
+    type: "object",
+    properties: {
+      name: { type: "string", description: "The existing skill's name (unchanged)." },
+      description: {
+        type: "string",
+        description:
+          "Revised description — keep the task-based trigger broad enough to fire on terse, preference-free requests yet specific to this task; never tailor it to specific example prompts.",
+      },
+      instructions: { type: "string", description: "Full revised SKILL.md body, keeping prior behavior + the new preference." },
+      highlights: {
+        type: "array",
+        items: { type: "string" },
+        description: "2-4 very short capability bullets for the updated skill (a few words each), including the newly added behavior.",
+      },
+    },
+    required: ["name", "description", "instructions", "highlights"],
+  },
+};
 
 export function buildSkillCreatorSystem(): string {
   return `${SKILL_CREATOR_GUIDE}

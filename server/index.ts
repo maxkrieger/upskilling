@@ -9,7 +9,6 @@ import { reportError } from "./discord.ts";
 import { startTrace } from "./trace.ts";
 import {
   CODE_EXECUTION_TOOL,
-  CREATE_SKILL_TOOL,
   deleteSkillRemote,
   getSkillCreatorRef,
   nameSlugBase,
@@ -18,14 +17,16 @@ import {
   skillContainer,
   SKILLS_BETAS,
   slugBase,
-  UPDATE_SKILL_TOOL,
 } from "./skills.ts";
 import {
   buildChatSystem,
   buildExtractUser,
   cueOperatorNote,
   updateOperatorNote,
+  CREATE_SKILL_TOOL,
   EXTRACT_SCHEMA,
+  EXTRACT_SYSTEM,
+  UPDATE_SKILL_TOOL,
 } from "./prompts.ts";
 import { conversationToText, id, toAnthropicMessages } from "./util.ts";
 import type {
@@ -355,8 +356,7 @@ app.post("/api/extract", async (c) => {
     cluster: string;
     isWorkflow: boolean;
   }>({
-    system:
-      "You extract reusable workflow descriptions from conversations, quoting the user's specific preferences verbatim.",
+    system: EXTRACT_SYSTEM,
     user: buildExtractUser({
       conversationText: conversationToText(body.conversation),
       existingClusters,

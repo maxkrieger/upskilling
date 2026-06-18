@@ -20,59 +20,9 @@ export const SKILLS_BETAS = [
 ];
 export const CODE_EXECUTION_TOOL = { type: "code_execution_20250825", name: "code_execution" };
 
-/** Client tools the chat model calls to persist skills (the ONLY way to save). */
-export const CREATE_SKILL_TOOL = {
-  name: "create_skill",
-  description:
-    "Save a new Skill so the user's preferences apply automatically next time. BEFORE calling this, you MUST consult the skill-creator skill — read its SKILL.md (it is mounted in the container) and follow its authoring methodology to shape the name, description, and instructions. Then call this tool to persist the result. This is the only way a skill is saved — do not write files to the workspace and do not ask the user to copy/paste.",
-  input_schema: {
-    type: "object",
-    properties: {
-      name: { type: "string", description: "Short Title-case skill name." },
-      description: {
-        type: "string",
-        description:
-          "What it does + WHEN it should trigger. Trigger on the recurring TASK/intent (its subject and context), broad enough to fire even when the user phrases the request minimally and omits every preference — just the ask plus its data — yet specific enough that unrelated requests don't match. Before finalizing, mentally test a few varied future phrasings of this task (including terse, preference-free ones) to confirm they'd trigger, plus a couple of unrelated asks to confirm they wouldn't, and refine the wording for that balance. Never restate the user's preferences as the trigger, and never tailor it to specific example prompts.",
-      },
-      instructions: {
-        type: "string",
-        description: "The SKILL.md body: imperative steps and the preferences to apply automatically.",
-      },
-      highlights: {
-        type: "array",
-        items: { type: "string" },
-        description:
-          "2-4 very short bullets (a few words each) of the concrete defaults the skill applies automatically — shown to the user as a capability checklist.",
-      },
-    },
-    required: ["name", "description", "instructions", "highlights"],
-  },
-};
-
-/** Update an existing skill (matched by name) by folding in a new preference. */
-export const UPDATE_SKILL_TOOL = {
-  name: "update_skill",
-  description:
-    "Update an existing Skill the user already has by folding in a new standing preference. BEFORE calling this, you MUST consult the skill-creator skill — read its SKILL.md (mounted in the container) and follow its methodology for revising a skill. Then call this tool with the SAME name as that skill and the full revised description + instructions. This is the only way the update is persisted.",
-  input_schema: {
-    type: "object",
-    properties: {
-      name: { type: "string", description: "The existing skill's name (unchanged)." },
-      description: {
-        type: "string",
-        description:
-          "Revised description — keep the task-based trigger broad enough to fire on terse, preference-free requests yet specific to this task; never tailor it to specific example prompts.",
-      },
-      instructions: { type: "string", description: "Full revised SKILL.md body, keeping prior behavior + the new preference." },
-      highlights: {
-        type: "array",
-        items: { type: "string" },
-        description: "2-4 very short capability bullets for the updated skill (a few words each), including the newly added behavior.",
-      },
-    },
-    required: ["name", "description", "instructions", "highlights"],
-  },
-};
+// The create_skill / update_skill tool definitions live in server/prompts.ts —
+// all model-facing prompt strings (incl. tool descriptions) are centralized
+// there. index.ts attaches them to the chat request alongside CODE_EXECUTION_TOOL.
 
 function parseSkillMd(md: string): { name: string; description: string; body: string } {
   const m = md.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);

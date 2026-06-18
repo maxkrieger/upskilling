@@ -1,5 +1,5 @@
 import { jsonCall } from "./anthropic.ts";
-import { buildCueUser, CUE_SCHEMA } from "./prompts.ts";
+import { buildCueUser, CUE_SCHEMA, CUE_SYSTEM } from "./prompts.ts";
 import type { CueDecision, Skill, WorkflowSet } from "../shared/types.ts";
 
 /**
@@ -25,8 +25,7 @@ export async function decideCue(params: {
   if (cueable.length === 0 && activeSkills.length === 0) return { shouldCue: false };
 
   const decision = await jsonCall<CueDecision>({
-    system:
-      "You are a precise classifier for Skill suggestions. Favor precision over recall: only cue on clear prior repetition (create) or a clear new standing preference for an existing skill (update).",
+    system: CUE_SYSTEM,
     user: buildCueUser({ userMessage: params.userMessage, workflowIndex: cueable, activeSkills }),
     schema: CUE_SCHEMA as unknown as Record<string, unknown>,
   });

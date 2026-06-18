@@ -9,17 +9,15 @@
  * Mirrors the real /api/chat assembly (same system prompt, container, tools).
  * Run: `npm run test:skill`.
  */
-import { buildChatSystem } from "../server/prompts.ts";
+import { buildChatSystem, CREATE_SKILL_TOOL, UPDATE_SKILL_TOOL } from "../server/prompts.ts";
 import { streamChat } from "../server/anthropic.ts";
 import {
   CODE_EXECUTION_TOOL,
-  CREATE_SKILL_TOOL,
   deleteSkillRemote,
   getSkillCreatorRef,
   skillContainer,
   SKILLS_BETAS,
   slugBase,
-  UPDATE_SKILL_TOOL,
 } from "../server/skills.ts";
 
 interface Scenario {

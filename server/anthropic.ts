@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { ENV } from "./env.ts";
+import { JSON_RESPONSE_TOOL } from "./prompts.ts";
 
 // Created lazily on first use so the API key is read at REQUEST time, not module
 // load — on the Workers runtime env bindings aren't available at module scope.
@@ -46,8 +47,8 @@ export async function jsonCall<T>(opts: JsonCallOptions): Promise<T> {
     system: opts.system,
     tools: [
       {
-        name: "respond",
-        description: "Return the structured response.",
+        name: JSON_RESPONSE_TOOL.name,
+        description: JSON_RESPONSE_TOOL.description,
         input_schema: opts.schema as Anthropic.Tool.InputSchema,
       },
     ],

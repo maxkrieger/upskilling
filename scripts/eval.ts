@@ -18,19 +18,20 @@ import {
   buildExtractUser,
   buildSkillCreatorSystem,
   buildSkillCreatorUser,
+  CREATE_SKILL_TOOL,
   EXTRACT_SCHEMA,
+  EXTRACT_SYSTEM,
   SKILL_SCHEMA,
+  UPDATE_SKILL_TOOL,
 } from "../server/prompts.ts";
 import {
   CODE_EXECUTION_TOOL,
-  CREATE_SKILL_TOOL,
   deleteSkillRemote,
   getSkillCreatorRef,
   registerSkill,
   skillContainer,
   SKILLS_BETAS,
   slugBase,
-  UPDATE_SKILL_TOOL,
 } from "../server/skills.ts";
 import { conversationToText, id, toAnthropicMessages } from "../server/util.ts";
 import { getProfile } from "../src/data/index.ts";
@@ -532,8 +533,7 @@ async function evalMultiDocOneConvo() {
 
   // Real extraction of that first work item -> 1-member in-progress index.
   const ex = await jsonCall<{ summary: string; quotes: string[]; cluster: string; isWorkflow: boolean }>({
-    system:
-      "You extract reusable workflow descriptions from conversations, quoting the user's specific preferences verbatim.",
+    system: EXTRACT_SYSTEM,
     user: buildExtractUser({ conversationText: conversationToText(firstDoc), existingClusters: [] }),
     schema: EXTRACT_SCHEMA as unknown as Record<string, unknown>,
   });
