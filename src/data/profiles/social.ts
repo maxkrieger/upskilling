@@ -3,7 +3,7 @@ import type { Profile } from "../../../shared/types.ts";
 /**
  * Social Media Manager persona. Promotes artworks for a gallery on Instagram.
  * Primary workflow cluster: Instagram art captions in a consistent house voice
- * (highbrow/sophisticated audience, no em dashes, no grandiose marketing
+ * (sophisticated audience, no em dashes, no grandiose marketing
  * language, followed by a block of relevant hashtags). Two prior caption
  * conversations repeat the same preferences verbatim, making that cluster
  * "overdue" for a skill, so a matching preset prompt triggers a cue.
@@ -37,7 +37,7 @@ export const socialProfile: Profile = {
       title: "Instagram caption for a new work",
       subtitle: "Oil painting, in the house voice",
       prompt:
-        "Write an Instagram caption for a new work. Artist: Mara Velasco. Title: 'Untitled No. 7'. Medium: oil on linen. Year: 2025. Themes: memory, erosion, domestic interiors. Highbrow audience, no em dashes, no grandiosity, and add hashtags.",
+        "Write an Instagram caption for a new work. Artist: Mara Velasco. Title: 'Untitled No. 7'. Medium: oil on linen. Year: 2025. Themes: memory, erosion, domestic interiors. Sophisticated audience, no em dashes, no grandiosity, and add hashtags.",
       attachmentRefs: ["untitled_no7.jpg"],
     },
     {
@@ -57,7 +57,7 @@ export const socialProfile: Profile = {
   ],
 
   // Shown once the user has an active caption skill — just the artwork facts;
-  // the skill supplies the highbrow voice, no-em-dash rule, and hashtags.
+  // the skill supplies the sophisticated voice, no-em-dash rule, and hashtags.
   loosePresets: [
     {
       id: "p_so_l1",
@@ -83,40 +83,70 @@ export const socialProfile: Profile = {
   ],
 
   conversations: [
-    // --- Cluster: instagram-art-caption (member 1) ---
+    // --- Cluster: instagram-art-caption (member 1) — the FIRST time, the house
+    //     voice is established through a couple of corrections (kill the em dash
+    //     and grandiosity, keep it sophisticated, then add hashtags). Members 2 and 3
+    //     below are the terse "same voice as always" repeats. ---
     {
       id: "c_so_cap1",
       profileId: "social",
       title: "Caption: Etchings, R. Okafor",
       createdAt: "2026-05-06T13:40:00.000Z",
-      updatedAt: "2026-05-06T13:45:00.000Z",
+      updatedAt: "2026-05-06T13:49:00.000Z",
       messages: [
         {
           id: "m1",
           role: "user",
           content:
-            "Write an Instagram caption for a new piece. Artist: Rotimi Okafor. Title: 'Threshold II'. Medium: copperplate etching. Year: 2024. Themes: migration, thresholds, the body in transit. Write for a highbrow audience, no em dashes, no grandiosity, and add hashtags.",
+            "Write an Instagram caption for a new piece. Artist: Rotimi Okafor. Title: 'Threshold II'. Medium: copperplate etching. Year: 2024. Themes: migration, thresholds, the body in transit.",
           createdAt: "2026-05-06T13:40:00.000Z",
         },
         {
           id: "m2",
           role: "assistant",
           content:
-            "Rotimi Okafor, *Threshold II* (2024), copperplate etching.\n\nA figure pauses at the edge of a doorway, neither arriving nor leaving. Okafor works the copperplate in close, deliberate lines, letting the bitten marks hold the weight of the body in transit. The etching reads as a study of thresholds: the moments of crossing that migration asks us to repeat.\n\nOn view now at the gallery.\n\n#RotimiOkafor #copperplateetching #printmaking #contemporaryprint #figurativeart #migrationart #worksonpaper #fineartprint #galleryexhibition #intaglio",
-          createdAt: "2026-05-06T13:43:00.000Z",
+            "Rotimi Okafor, *Threshold II* (2024) — a breathtaking, unmissable meditation on migration that will stop you mid-scroll. A lone figure hovers in a doorway, caught in a transformative moment of profound transit. An absolute must-see masterpiece you cannot afford to miss.",
+          createdAt: "2026-05-06T13:42:00.000Z",
         },
         {
           id: "m3",
           role: "user",
-          content: "Perfect, that's the voice. Thanks.",
+          content:
+            "Too much. For our house voice: no em dashes, and lose the grandiosity — keep it understated for a sophisticated audience.",
           createdAt: "2026-05-06T13:44:00.000Z",
         },
         {
           id: "m4",
           role: "assistant",
           content:
-            "Glad it lands. Send the next artwork's details whenever you're ready and I'll keep to the same tone.",
+            "Rotimi Okafor, *Threshold II* (2024), copperplate etching.\n\nA figure pauses at the edge of a doorway, neither arriving nor leaving. Okafor works the copperplate in close, deliberate lines, letting the bitten marks hold the weight of the body in transit. The etching reads as a study of thresholds: the moments of crossing that migration asks us to repeat.\n\nOn view now at the gallery.",
           createdAt: "2026-05-06T13:45:00.000Z",
+        },
+        {
+          id: "m5",
+          role: "user",
+          content: "Better. Now add a block of relevant hashtags.",
+          createdAt: "2026-05-06T13:47:00.000Z",
+        },
+        {
+          id: "m6",
+          role: "assistant",
+          content:
+            "Rotimi Okafor, *Threshold II* (2024), copperplate etching.\n\nA figure pauses at the edge of a doorway, neither arriving nor leaving. Okafor works the copperplate in close, deliberate lines, letting the bitten marks hold the weight of the body in transit. The etching reads as a study of thresholds: the moments of crossing that migration asks us to repeat.\n\nOn view now at the gallery.\n\n#RotimiOkafor #copperplateetching #printmaking #contemporaryprint #figurativeart #migrationart #worksonpaper #fineartprint #galleryexhibition #intaglio",
+          createdAt: "2026-05-06T13:48:00.000Z",
+        },
+        {
+          id: "m7",
+          role: "user",
+          content: "Perfect, that's the voice.",
+          createdAt: "2026-05-06T13:49:00.000Z",
+        },
+        {
+          id: "m8",
+          role: "assistant",
+          content:
+            "Glad it lands. Send the next artwork's details whenever you're ready and I'll keep to the same register.",
+          createdAt: "2026-05-06T13:49:30.000Z",
         },
       ],
     },
@@ -132,7 +162,7 @@ export const socialProfile: Profile = {
           id: "m1",
           role: "user",
           content:
-            "Caption for our new arrival, same as last time. Artist: Lena Brandt. Title: 'Ballast'. Medium: cast bronze. Year: 2023. Themes: weight, equilibrium, labor. Highbrow audience, no em dashes, no grandiosity, and add hashtags.",
+            "Caption for our new arrival, same as last time. Artist: Lena Brandt. Title: 'Ballast'. Medium: cast bronze. Year: 2023. Themes: weight, equilibrium, labor. Sophisticated audience, no em dashes, no grandiosity, and add hashtags.",
           createdAt: "2026-05-22T10:15:00.000Z",
         },
         {
@@ -156,7 +186,7 @@ export const socialProfile: Profile = {
           id: "m1",
           role: "user",
           content:
-            "Another caption please, same voice as always. Artist: Adaeze Nwosu. Title: 'Low Season'. Medium: archival pigment print. Year: 2025. Themes: emptied resort towns, the off-season, absence. Highbrow audience, no em dashes, no grandiosity, and add hashtags.",
+            "Another caption please, same voice as always. Artist: Adaeze Nwosu. Title: 'Low Season'. Medium: archival pigment print. Year: 2025. Themes: emptied resort towns, the off-season, absence. Sophisticated audience, no em dashes, no grandiosity, and add hashtags.",
           createdAt: "2026-05-28T11:20:00.000Z",
         },
         {
@@ -186,7 +216,7 @@ export const socialProfile: Profile = {
           id: "m1",
           role: "user",
           content:
-            "Write a short studio-visit / artist-spotlight Instagram post. Artist: Tomás Rivera. Medium: cyanotype on cotton. Working on a series called 'Saltmarsh' about tidal flats near where he grew up. He exposes the cloth outdoors at dawn and lets the fog affect the print. Highbrow audience, no em dashes, no grandiosity, and add hashtags.",
+            "Write a short studio-visit / artist-spotlight Instagram post. Artist: Tomás Rivera. Medium: cyanotype on cotton. Working on a series called 'Saltmarsh' about tidal flats near where he grew up. He exposes the cloth outdoors at dawn and lets the fog affect the print. Sophisticated audience, no em dashes, no grandiosity, and add hashtags.",
           createdAt: "2026-05-30T15:10:00.000Z",
         },
         {
@@ -210,7 +240,7 @@ export const socialProfile: Profile = {
           id: "m1",
           role: "user",
           content:
-            "Write an Instagram announcement for our new show 'After Rain', a solo exhibition of paintings by Yuki Sato, opening Thursday May 29 at 6pm, on view through July 12. Highbrow audience, no em dashes, no grandiosity, add hashtags.",
+            "Write an Instagram announcement for our new show 'After Rain', a solo exhibition of paintings by Yuki Sato, opening Thursday May 29 at 6pm, on view through July 12. Sophisticated audience, no em dashes, no grandiosity, add hashtags.",
           createdAt: "2026-05-14T16:05:00.000Z",
         },
         {
@@ -280,22 +310,27 @@ export const socialProfile: Profile = {
         {
           conversationId: "c_so_cap1",
           summary:
-            "Wrote an Instagram caption for an etching by Rotimi Okafor; wanted a 'highbrow audience', 'no em dashes', 'no grandiosity', and to 'add hashtags'.",
-          quotes: ["highbrow audience", "no em dashes", "no grandiosity", "add hashtags"],
+            "Wrote an Instagram caption for a Rotimi Okafor etching, settling the house voice through a couple of corrections: 'no em dashes', 'lose the grandiosity', keep it understated for a 'sophisticated audience', then 'add a block of relevant hashtags'.",
+          quotes: [
+            "no em dashes",
+            "lose the grandiosity",
+            "sophisticated audience",
+            "add a block of relevant hashtags",
+          ],
           cluster: "instagram-art-caption",
         },
         {
           conversationId: "c_so_cap2",
           summary:
-            "Wrote an Instagram caption for a Lena Brandt bronze 'same as last time'; asked for a 'highbrow audience', 'no em dashes', 'no grandiosity', and to 'add hashtags'.",
-          quotes: ["highbrow audience", "no em dashes", "no grandiosity", "add hashtags"],
+            "Wrote an Instagram caption for a Lena Brandt bronze 'same as last time'; asked for a 'sophisticated audience', 'no em dashes', 'no grandiosity', and to 'add hashtags'.",
+          quotes: ["sophisticated audience", "no em dashes", "no grandiosity", "add hashtags"],
           cluster: "instagram-art-caption",
         },
         {
           conversationId: "c_so_cap3",
           summary:
-            "Wrote an Instagram caption for an Adaeze Nwosu photograph 'same voice as always'; asked for a 'highbrow audience', 'no em dashes', 'no grandiosity', and to 'add hashtags'.",
-          quotes: ["highbrow audience", "no em dashes", "no grandiosity", "add hashtags"],
+            "Wrote an Instagram caption for an Adaeze Nwosu photograph 'same voice as always'; asked for a 'sophisticated audience', 'no em dashes', 'no grandiosity', and to 'add hashtags'.",
+          quotes: ["sophisticated audience", "no em dashes", "no grandiosity", "add hashtags"],
           cluster: "instagram-art-caption",
         },
       ],
@@ -309,8 +344,8 @@ export const socialProfile: Profile = {
         {
           conversationId: "c_so_spot1",
           summary:
-            "Wrote a studio-visit / artist-spotlight post for Tomás Rivera's cyanotype 'Saltmarsh' series; wanted a 'highbrow audience', 'no em dashes', 'no grandiosity', and to 'add hashtags'.",
-          quotes: ["highbrow audience", "no em dashes", "no grandiosity", "add hashtags"],
+            "Wrote a studio-visit / artist-spotlight post for Tomás Rivera's cyanotype 'Saltmarsh' series; wanted a 'sophisticated audience', 'no em dashes', 'no grandiosity', and to 'add hashtags'.",
+          quotes: ["sophisticated audience", "no em dashes", "no grandiosity", "add hashtags"],
           cluster: "artist-spotlight",
         },
       ],
@@ -324,8 +359,8 @@ export const socialProfile: Profile = {
         {
           conversationId: "c_so_show1",
           summary:
-            "Drafted an Instagram exhibition announcement for the solo show 'After Rain' (opening date, on-view dates); wanted a 'highbrow audience', 'no em dashes', 'no grandiosity', 'add hashtags'.",
-          quotes: ["highbrow audience", "no em dashes", "no grandiosity", "add hashtags"],
+            "Drafted an Instagram exhibition announcement for the solo show 'After Rain' (opening date, on-view dates); wanted a 'sophisticated audience', 'no em dashes', 'no grandiosity', 'add hashtags'.",
+          quotes: ["sophisticated audience", "no em dashes", "no grandiosity", "add hashtags"],
           cluster: "exhibition-announcement",
         },
       ],

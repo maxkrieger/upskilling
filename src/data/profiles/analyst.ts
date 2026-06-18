@@ -123,19 +123,21 @@ export const analystProfile: Profile = {
   ],
 
   conversations: [
-    // --- Cluster: deck-bar-charts (member 1) ---
+    // --- Cluster: deck-bar-charts (member 1) — the FIRST time, the house style
+    //     emerges over several refinement turns (palette, then no gridlines/
+    //     legend, then sorted). Member 2 below is the terse "same as always"
+    //     repeat, which is exactly why this workflow is overdue for a Skill. ---
     {
       id: "c_an_chart1",
       profileId: "analyst",
       title: "Earnings bar chart",
       createdAt: "2026-05-04T15:10:00.000Z",
-      updatedAt: "2026-05-04T15:14:00.000Z",
+      updatedAt: "2026-05-04T15:22:00.000Z",
       messages: [
         {
           id: "m1",
           role: "user",
-          content:
-            "Make a bar chart of quarterly earnings for the deck. Use our company palette (start with the clay orange #d97757), no gridlines, no legend, and sort the bars descending.",
+          content: "Make a bar chart of quarterly earnings for the board deck.",
           createdAt: "2026-05-04T15:10:00.000Z",
           attachments: [
             { id: "a_earn", name: "quarterly_earnings.csv", kind: "csv", content: EARNINGS_CSV },
@@ -145,8 +147,47 @@ export const analystProfile: Profile = {
           id: "m2",
           role: "assistant",
           content:
-            "Here's the earnings bar chart in the house style — sorted descending, no gridlines or legend.\n\n```chart\n{\n  \"kind\": \"bar\",\n  \"title\": \"Quarterly Earnings ($M)\",\n  \"data\": [{\"name\":\"Q3\",\"earnings\":61},{\"name\":\"Q4\",\"earnings\":52},{\"name\":\"Q1\",\"earnings\":44},{\"name\":\"Q2\",\"earnings\":38}],\n  \"xKey\": \"name\",\n  \"series\": [\"earnings\"],\n  \"style\": {\"palette\":[\"#d97757\",\"#c2613f\",\"#e0a08a\",\"#8c4a32\"],\"gridlines\":false,\"legend\":false,\"sorted\":true}\n}\n```\n\nWant me to export this to PNG dimensions for slides?",
+            "Here's a bar chart of quarterly earnings.\n\n```chart\n{\n  \"kind\": \"bar\",\n  \"title\": \"Quarterly Earnings ($M)\",\n  \"data\": [{\"name\":\"Q1\",\"earnings\":44},{\"name\":\"Q2\",\"earnings\":38},{\"name\":\"Q3\",\"earnings\":61},{\"name\":\"Q4\",\"earnings\":52}],\n  \"xKey\": \"name\",\n  \"series\": [\"earnings\"],\n  \"style\": {\"palette\":[\"#5b8fb0\"],\"gridlines\":true,\"legend\":true}\n}\n```\n\nAnything you'd like to adjust?",
           createdAt: "2026-05-04T15:12:00.000Z",
+        },
+        {
+          id: "m3",
+          role: "user",
+          content: "Use our company palette — start with the clay orange #d97757.",
+          createdAt: "2026-05-04T15:14:00.000Z",
+        },
+        {
+          id: "m4",
+          role: "assistant",
+          content:
+            "Updated to the company palette, starting with the clay orange.\n\n```chart\n{\n  \"kind\": \"bar\",\n  \"title\": \"Quarterly Earnings ($M)\",\n  \"data\": [{\"name\":\"Q1\",\"earnings\":44},{\"name\":\"Q2\",\"earnings\":38},{\"name\":\"Q3\",\"earnings\":61},{\"name\":\"Q4\",\"earnings\":52}],\n  \"xKey\": \"name\",\n  \"series\": [\"earnings\"],\n  \"style\": {\"palette\":[\"#d97757\",\"#c2613f\",\"#e0a08a\",\"#8c4a32\"],\"gridlines\":true,\"legend\":true}\n}\n```",
+          createdAt: "2026-05-04T15:15:00.000Z",
+        },
+        {
+          id: "m5",
+          role: "user",
+          content: "Drop the gridlines and the legend too.",
+          createdAt: "2026-05-04T15:17:00.000Z",
+        },
+        {
+          id: "m6",
+          role: "assistant",
+          content:
+            "Gridlines and legend removed.\n\n```chart\n{\n  \"kind\": \"bar\",\n  \"title\": \"Quarterly Earnings ($M)\",\n  \"data\": [{\"name\":\"Q1\",\"earnings\":44},{\"name\":\"Q2\",\"earnings\":38},{\"name\":\"Q3\",\"earnings\":61},{\"name\":\"Q4\",\"earnings\":52}],\n  \"xKey\": \"name\",\n  \"series\": [\"earnings\"],\n  \"style\": {\"palette\":[\"#d97757\",\"#c2613f\",\"#e0a08a\",\"#8c4a32\"],\"gridlines\":false,\"legend\":false}\n}\n```",
+          createdAt: "2026-05-04T15:18:00.000Z",
+        },
+        {
+          id: "m7",
+          role: "user",
+          content: "And sort the bars descending.",
+          createdAt: "2026-05-04T15:20:00.000Z",
+        },
+        {
+          id: "m8",
+          role: "assistant",
+          content:
+            "Sorted high to low. That's the house style for our deck charts.\n\n```chart\n{\n  \"kind\": \"bar\",\n  \"title\": \"Quarterly Earnings ($M)\",\n  \"data\": [{\"name\":\"Q3\",\"earnings\":61},{\"name\":\"Q4\",\"earnings\":52},{\"name\":\"Q1\",\"earnings\":44},{\"name\":\"Q2\",\"earnings\":38}],\n  \"xKey\": \"name\",\n  \"series\": [\"earnings\"],\n  \"style\": {\"palette\":[\"#d97757\",\"#c2613f\",\"#e0a08a\",\"#8c4a32\"],\"gridlines\":false,\"legend\":false,\"sorted\":true}\n}\n```\n\nWant me to export this at slide dimensions?",
+          createdAt: "2026-05-04T15:22:00.000Z",
         },
       ],
     },
@@ -343,8 +384,13 @@ export const analystProfile: Profile = {
         {
           conversationId: "c_an_chart1",
           summary:
-            "Created a bar chart of quarterly earnings for a deck; needed the company palette (clay orange #d97757), 'no gridlines', 'no legend', and bars 'sort descending'.",
-          quotes: ["company palette", "no gridlines", "no legend", "sort the bars descending"],
+            "Built a bar chart of quarterly earnings for the deck, dialing in the house style over several turns: 'use our company palette' starting with the clay orange '#d97757', then 'drop the gridlines and the legend', then 'sort the bars descending'.",
+          quotes: [
+            "use our company palette",
+            "start with the clay orange #d97757",
+            "drop the gridlines and the legend",
+            "sort the bars descending",
+          ],
           cluster: "deck-bar-charts",
         },
         {

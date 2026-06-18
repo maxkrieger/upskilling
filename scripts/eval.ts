@@ -15,8 +15,10 @@ import { decideCue } from "../server/cue.ts";
 import { jsonCall, streamChat } from "../server/anthropic.ts";
 import {
   buildChatSystem,
+  buildExtractUser,
   buildSkillCreatorSystem,
   buildSkillCreatorUser,
+  EXTRACT_SCHEMA,
   SKILL_SCHEMA,
 } from "../server/prompts.ts";
 import {
@@ -30,9 +32,9 @@ import {
   slugBase,
   UPDATE_SKILL_TOOL,
 } from "../server/skills.ts";
-import { toAnthropicMessages } from "../server/util.ts";
+import { conversationToText, id, toAnthropicMessages } from "../server/util.ts";
 import { getProfile } from "../src/data/index.ts";
-import type { Attachment, PresetPrompt, Profile, Skill, WorkflowSet } from "../shared/types.ts";
+import type { Conversation, Attachment, PresetPrompt, Profile, Skill, WorkflowSet } from "../shared/types.ts";
 import { normalizeCluster, upsertSummary } from "../shared/workflow.ts";
 import { CUE_CASES } from "./eval-cases.ts";
 
@@ -232,7 +234,7 @@ async function evalSkillQuality() {
       concepts: [
         "include relevant hashtags",
         "no em dashes",
-        "a highbrow / sophisticated audience voice",
+        "a sophisticated audience voice",
         "avoid LLM grandiosity / slop",
       ],
     },
@@ -460,15 +462,96 @@ async function evalLifecycle() {
   return { rows, presetOk, presetTotal: presetRows.length, fireOk, fireTotal: fires.length };
 }
 
+/**
+ * End-to-end "multiple work items in ONE conversation" check (e.g. reviewing
+ * several legal docs in a single chat). Unlike the CUE_CASES — which hand-write
+ * the in-progress index — this runs the REAL extraction on the first doc's turns
+ * to build that index, then exercises the decider:
+ *   - introducing a SECOND, DISTINCT doc of the same workflow  -> cue,
+ *   - merely refining the SAME doc (adding a check)            -> no cue.
+ * Uses the lawyer NDA fixture; nothing is added to the seeded profile data.
+ */
+async function evalMultiDocOneConvo() {
+  console.log("\n=== Multi-doc in one conversation (real extract → cue) ===");
+  const lawyer = getProfile("lawyer")!;
+  const acme = lawyer.attachments.find((a) => a.name === "acme_nda.txt")!;
+  const convId = "c_multidoc_lawyer";
+
+  // The conversation so far: ONE NDA reviewed (first work item in the convo).
+  const firstDoc: Pick<Conversation, "messages"> = {
+    messages: [
+      {
+        id: "m1",
+        role: "user",
+        createdAt: "t",
+        content:
+          "Review this NDA against our standard — it must be mutual, governed by California or Delaware, and no non-solicit riders. No clause-by-clause table; just the off-market flags and the required edits.",
+        attachments: [acme],
+      },
+      {
+        id: "m2",
+        role: "assistant",
+        createdAt: "t",
+        content:
+          "Reviewed against the house standard. Not signable as drafted: one-way despite the caption, governed by New York, perpetual survival, and a 24-month non-solicit rider. Required edits: make it mutual, move governing law to DE or CA, cap survival at 3–5 years, and delete the non-solicit.",
+      },
+    ],
+  };
+
+  // Real extraction of that first work item -> 1-member in-progress index.
+  const ex = await jsonCall<{ summary: string; quotes: string[]; cluster: string; isWorkflow: boolean }>({
+    system:
+      "You extract reusable workflow descriptions from conversations, quoting the user's specific preferences verbatim.",
+    user: buildExtractUser({ conversationText: conversationToText(firstDoc), existingClusters: [] }),
+    schema: EXTRACT_SCHEMA as unknown as Record<string, unknown>,
+  });
+  const inProgress: WorkflowSet[] = ex.isWorkflow
+    ? upsertSummary(
+        [],
+        { conversationId: convId, summary: ex.summary, quotes: ex.quotes, cluster: ex.cluster },
+        convId,
+        () => id("ws"),
+        "t",
+      )
+    : [];
+
+  // Decider: a SECOND distinct doc should cue; refining the SAME doc should not.
+  const secondDoc = await decideCue({
+    userMessage:
+      "Different one now — here's the Northwind vendor NDA we're onboarding. Run the same review on this one too.",
+    workflowIndex: inProgress,
+    skills: [],
+  });
+  const refineSame = await decideCue({
+    userMessage: "Actually, on that same Acme NDA, also flag any IP assignment clauses while you're at it.",
+    workflowIndex: inProgress,
+    skills: [],
+  });
+
+  const checks: Array<[string, boolean]> = [
+    ["first doc extracted as a workflow (1-member in-progress set)", !!ex.isWorkflow && inProgress.length === 1],
+    ["second DISTINCT doc in same convo → cue", !!secondDoc.shouldCue],
+    ["refining the SAME doc → no cue", !refineSame.shouldCue],
+  ];
+  let pass = 0;
+  for (const [name, ok] of checks) {
+    console.log(`  ${ok ? "✓" : "✗"} ${name}`);
+    if (ok) pass++;
+  }
+  console.log(`  (extracted cluster="${ex.cluster}", isWorkflow=${ex.isWorkflow})`);
+  return { pass, total: checks.length, cluster: ex.cluster };
+}
+
 async function main() {
   const indexUpsert = evalIndexUpsert(); // fast, deterministic — fail early
   const cueing = await evalCueing();
+  const multiDoc = await evalMultiDocOneConvo();
   const quality = await evalSkillQuality();
   const lifecycle = await evalLifecycle();
   await mkdir("eval-results", { recursive: true });
   await writeFile(
     "eval-results/eval.json",
-    JSON.stringify({ indexUpsert, cueing, quality, lifecycle, at: new Date().toISOString() }, null, 2),
+    JSON.stringify({ indexUpsert, cueing, multiDoc, quality, lifecycle, at: new Date().toISOString() }, null, 2),
   );
   console.log("\nWrote eval-results/eval.json");
 }

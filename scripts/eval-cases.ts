@@ -216,8 +216,8 @@ export const CUE_CASES: CueCase[] = [
       "Great. Now write one for a different piece — a bronze sculpture, \"Aftermath\" by Ines Kovac, 2021.",
     index: [oneMember("instagram-art-caption", "c_cur_social", {
       summary:
-        "Earlier in this same conversation, wrote an Instagram caption for an oil painting, with a highbrow voice and no em dashes.",
-      quotes: ["highbrow audience", "no em dashes", "relevant hashtags"],
+        "Earlier in this same conversation, wrote an Instagram caption for an oil painting, with a sophisticated voice and no em dashes.",
+      quotes: ["sophisticated audience", "no em dashes", "relevant hashtags"],
     })],
     expectCue: true,
   },
