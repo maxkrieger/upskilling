@@ -83,35 +83,64 @@ export function MessageView({
   }
   inserts.sort((a, b) => a.at - b.at);
 
-  const body: ReactNode[] = [];
+  // The streaming cursor trails the END of the live text. It's hosted INLINE on
+  // the last text segment (see Markdown `cursor`) so it stays at the end of the
+  // line — including across a spliced "using skill" chip — instead of dropping
+  // to its own line or vanishing below the chip until streaming finishes.
+  const cursor = streaming ? (
+    <ThinkingGlyph fixedWidth={false} className="align-middle text-accent" />
+  ) : null;
+
+  // Ordered parts: text segments split by inline inserts (skill chips, result card).
+  type Part =
+    | { kind: "text"; text: string; key: string }
+    | { kind: "node"; node: ReactNode; key: string };
+  const parts: Part[] = [];
   if (inserts.length) {
-    let cursor = 0;
+    let pos = 0;
     inserts.forEach((ins, i) => {
-      const seg = message.content.slice(cursor, ins.at);
-      if (seg.trim()) body.push(<Markdown key={`s${i}`} content={seg} />);
-      body.push(<div key={`i${i}`}>{ins.node}</div>);
-      cursor = ins.at;
+      const seg = message.content.slice(pos, ins.at);
+      if (seg.trim()) parts.push({ kind: "text", text: seg, key: `s${i}` });
+      parts.push({ kind: "node", node: ins.node, key: `i${i}` });
+      pos = ins.at;
     });
-    const tail = message.content.slice(cursor);
-    if (tail.trim()) body.push(<Markdown key="tail" content={tail} />);
+    const tail = message.content.slice(pos);
+    if (tail.trim()) parts.push({ kind: "text", text: tail, key: "tail" });
   } else if (message.content) {
-    body.push(<Markdown key="c" content={message.content} />);
-  } else if (streaming) {
-    body.push(
-      <div key="w" className="flex items-center gap-2 text-muted">
-        <ThinkingGlyph className="text-lg text-accent" />
-        <span>Working…</span>
-      </div>,
-    );
+    parts.push({ kind: "text", text: message.content, key: "c" });
   }
+  // Host the cursor on the last TEXT part (not a trailing chip), so it keeps
+  // trailing the most recent text even before the post-chip text arrives.
+  let lastTextIdx = -1;
+  for (let i = parts.length - 1; i >= 0; i--) {
+    if (parts[i].kind === "text") {
+      lastTextIdx = i;
+      break;
+    }
+  }
+
+  const body: ReactNode[] =
+    parts.length > 0
+      ? parts.map((p, i) =>
+          p.kind === "text" ? (
+            <Markdown key={p.key} content={p.text} cursor={i === lastTextIdx ? cursor : undefined} />
+          ) : (
+            <div key={p.key}>{p.node}</div>
+          ),
+        )
+      : streaming
+        ? [
+            <div key="w" className="flex items-center gap-2 text-muted">
+              <ThinkingGlyph className="text-lg text-accent" />
+              <span>Working…</span>
+            </div>,
+          ]
+        : [];
 
   return (
     <div className="flex">
       <div className="min-w-0 flex-1">
         {body}
-        {streaming && message.content && (
-          <ThinkingGlyph fixedWidth={false} className="align-middle text-accent" />
-        )}
         {showBanner && !isCard && card}
       </div>
     </div>

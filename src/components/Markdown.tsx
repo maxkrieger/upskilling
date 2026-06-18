@@ -1,4 +1,5 @@
-import ReactMarkdown from "react-markdown";
+import type { ReactNode } from "react";
+import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { ChartSpec } from "../../shared/types.ts";
 import { ChartBlock } from "./ChartBlock.tsx";
@@ -51,21 +52,49 @@ function PendingChart() {
   );
 }
 
-export function Markdown({ content }: { content: string }) {
+/** Custom renderers that append `cursor` inline to the LAST paragraph of a
+ * segment, so the streaming glyph trails the end of the text line (rather than
+ * dropping to its own line / below a spliced chip). */
+function cursorComponents(cursor: ReactNode, text: string): Components {
+  const end = text.trimEnd().length;
+  return {
+    p({ node, children }) {
+      const offset = (node as { position?: { end?: { offset?: number } } } | undefined)?.position?.end
+        ?.offset;
+      const isLast = offset == null || offset >= end;
+      return (
+        <p>
+          {children}
+          {isLast ? cursor : null}
+        </p>
+      );
+    },
+  };
+}
+
+export function Markdown({ content, cursor }: { content: string; cursor?: ReactNode }) {
   const segments = splitChartBlocks(content);
+  const lastIdx = segments.length - 1;
+  const lastIsMd = lastIdx >= 0 && segments[lastIdx].type === "md";
   return (
     <div className="prose-chat">
-      {segments.map((seg, i) =>
-        seg.type === "chart" ? (
-          <ChartBlock key={i} spec={seg.spec} />
-        ) : seg.type === "pending" ? (
-          <PendingChart key={i} />
-        ) : (
-          <ReactMarkdown key={i} remarkPlugins={[remarkGfm]}>
+      {segments.map((seg, i) => {
+        if (seg.type === "chart") return <ChartBlock key={i} spec={seg.spec} />;
+        if (seg.type === "pending") return <PendingChart key={i} />;
+        const withCursor = !!cursor && lastIsMd && i === lastIdx;
+        return (
+          <ReactMarkdown
+            key={i}
+            remarkPlugins={[remarkGfm]}
+            components={withCursor ? cursorComponents(cursor, seg.text) : undefined}
+          >
             {seg.text}
           </ReactMarkdown>
-        ),
-      )}
+        );
+      })}
+      {/* If the content ends on a chart/placeholder (no trailing paragraph to
+          host it), trail the cursor after everything so it never vanishes. */}
+      {cursor && !lastIsMd && <span className="align-middle">{cursor}</span>}
     </div>
   );
 }
