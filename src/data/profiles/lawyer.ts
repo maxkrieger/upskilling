@@ -137,7 +137,7 @@ export const lawyerProfile: Profile = {
       title: "Review a vendor NDA",
       subtitle: "Same playbook, new counterparty",
       prompt:
-        "Run our usual NDA review on this vendor agreement — mutual, CA or DE governing law, no non-solicit. Skip the clause-by-clause table; just flag the off-market terms and the required edits.",
+        "Review this vendor agreement against our standard — mutual, CA or DE governing law, no non-solicit. Skip the clause-by-clause table; just flag the off-market terms and the required edits.",
       attachmentRefs: ["vendor_nda.txt"],
     },
     {
@@ -190,7 +190,7 @@ export const lawyerProfile: Profile = {
           id: "m1",
           role: "user",
           content:
-            "Review this NDA. As always: it needs to be mutual, governed by California or Delaware, and no non-solicit riders. Don't do a clause-by-clause table — just flag the off-market clauses and the required edits.",
+            "Review this NDA against our house standard: it needs to be mutual, governed by California or Delaware, and no non-solicit riders. Don't do a clause-by-clause table — just flag the off-market clauses and the required edits.",
           createdAt: "2026-05-06T14:05:00.000Z",
           attachments: [
             { id: "a1", name: "acme_nda.txt", kind: "text", content: ACME_NDA },
@@ -230,7 +230,7 @@ export const lawyerProfile: Profile = {
           id: "m1",
           role: "user",
           content:
-            "Same NDA review as usual on this vendor one — mutual, governed by Delaware or California, no non-solicit. No clause-by-clause table; just the off-market flags and required edits.",
+            "Review this vendor NDA against our house standard — it needs to be mutual, governed by Delaware or California, and no non-solicit. No clause-by-clause table; just the off-market flags and required edits.",
           createdAt: "2026-05-21T10:40:00.000Z",
           attachments: [
             { id: "a1", name: "vendor_nda.txt", kind: "text", content: VENDOR_NDA },
@@ -345,7 +345,7 @@ export const lawyerProfile: Profile = {
         {
           conversationId: "c_law_nda2",
           summary:
-            "Ran the usual NDA review on the Northwind vendor agreement; required 'mutual', 'governed by Delaware or California', 'no non-solicit', and asked for just the 'off-market flags and required edits' (no clause-by-clause table).",
+            "Reviewed the Northwind vendor NDA against the house standard; again specified 'mutual', 'governed by Delaware or California', 'no non-solicit', and asked for just the 'off-market flags and required edits' (no clause-by-clause table).",
           quotes: [
             "mutual",
             "governed by Delaware or California",

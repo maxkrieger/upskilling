@@ -35,6 +35,7 @@ export function Composer({ showPresets }: { showPresets: boolean }) {
 
   const [text, setText] = useState("");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [dragging, setDragging] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
 
@@ -126,7 +127,24 @@ export function Composer({ showPresets }: { showPresets: boolean }) {
         </div>
       )}
 
-      <div className="flex items-end gap-2 rounded-2xl border border-border bg-surface p-2">
+      <div
+        onDragOver={(e) => {
+          e.preventDefault();
+          if (!dragging) setDragging(true);
+        }}
+        onDragLeave={(e) => {
+          // Ignore boundary crossings into child elements (textarea, buttons).
+          if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDragging(false);
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDragging(false);
+          void onFiles(e.dataTransfer.files);
+        }}
+        className={`relative flex items-end gap-2 rounded-2xl border bg-surface p-2 transition-colors ${
+          dragging ? "border-accent ring-2 ring-accent/30" : "border-border"
+        }`}
+      >
         <button
           onClick={() => fileRef.current?.click()}
           className="rounded-lg px-2 py-2 text-muted hover:bg-elevated"
@@ -163,6 +181,11 @@ export function Composer({ showPresets }: { showPresets: boolean }) {
         >
           <ArrowUp size={18} />
         </button>
+        {dragging && (
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-2xl bg-surface/85 text-sm font-medium text-accent">
+            Drop a file to attach
+          </div>
+        )}
       </div>
       <div className="mt-2 text-center text-xs text-faint">
         Demo prototype · Skills surfaced in context · {profile.name}

@@ -85,8 +85,8 @@ export const socialProfile: Profile = {
   conversations: [
     // --- Cluster: instagram-art-caption (member 1) — the FIRST time, the house
     //     voice is established through a couple of corrections (kill the em dash
-    //     and grandiosity, keep it sophisticated, then add hashtags). Members 2 and 3
-    //     below are the terse "same voice as always" repeats. ---
+    //     and grandiosity, keep it sophisticated, then add hashtags). Members 2
+    //     and 3 below re-state the full brief every time (no skill yet). ---
     {
       id: "c_so_cap1",
       profileId: "social",
@@ -162,7 +162,7 @@ export const socialProfile: Profile = {
           id: "m1",
           role: "user",
           content:
-            "Caption for our new arrival, same as last time. Artist: Lena Brandt. Title: 'Ballast'. Medium: cast bronze. Year: 2023. Themes: weight, equilibrium, labor. Sophisticated audience, no em dashes, no grandiosity, and add hashtags.",
+            "Caption for our new arrival. Artist: Lena Brandt. Title: 'Ballast'. Medium: cast bronze. Year: 2023. Themes: weight, equilibrium, labor. Sophisticated audience, no em dashes, no grandiosity, and add hashtags.",
           createdAt: "2026-05-22T10:15:00.000Z",
         },
         {
@@ -186,7 +186,7 @@ export const socialProfile: Profile = {
           id: "m1",
           role: "user",
           content:
-            "Another caption please, same voice as always. Artist: Adaeze Nwosu. Title: 'Low Season'. Medium: archival pigment print. Year: 2025. Themes: emptied resort towns, the off-season, absence. Sophisticated audience, no em dashes, no grandiosity, and add hashtags.",
+            "Another caption. Artist: Adaeze Nwosu. Title: 'Low Season'. Medium: archival pigment print. Year: 2025. Themes: emptied resort towns, the off-season, absence. Sophisticated audience, no em dashes, no grandiosity, and add hashtags.",
           createdAt: "2026-05-28T11:20:00.000Z",
         },
         {
@@ -322,14 +322,14 @@ export const socialProfile: Profile = {
         {
           conversationId: "c_so_cap2",
           summary:
-            "Wrote an Instagram caption for a Lena Brandt bronze 'same as last time'; asked for a 'sophisticated audience', 'no em dashes', 'no grandiosity', and to 'add hashtags'.",
+            "Wrote an Instagram caption for a Lena Brandt bronze; again spelled out the full brief: a 'sophisticated audience', 'no em dashes', 'no grandiosity', and to 'add hashtags'.",
           quotes: ["sophisticated audience", "no em dashes", "no grandiosity", "add hashtags"],
           cluster: "instagram-art-caption",
         },
         {
           conversationId: "c_so_cap3",
           summary:
-            "Wrote an Instagram caption for an Adaeze Nwosu photograph 'same voice as always'; asked for a 'sophisticated audience', 'no em dashes', 'no grandiosity', and to 'add hashtags'.",
+            "Wrote an Instagram caption for an Adaeze Nwosu photograph; again spelled out the full brief: a 'sophisticated audience', 'no em dashes', 'no grandiosity', and to 'add hashtags'.",
           quotes: ["sophisticated audience", "no em dashes", "no grandiosity", "add hashtags"],
           cluster: "instagram-art-caption",
         },

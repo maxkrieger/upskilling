@@ -114,19 +114,21 @@ export const analystProfile: Profile = {
       prompt: "Quick bar chart of Q3 revenue by region: NA 120, EMEA 86, APAC 64, LATAM 31.",
     },
     {
+      // Ordinary analytical question after the chart skill exists — it should NOT
+      // invoke the chart skill (demonstrates no false-positive firing).
       id: "p_an_l3",
-      title: "Pipeline by stage",
-      subtitle: "Your chart skill styles it",
-      prompt:
-        "Chart deals by pipeline stage: Prospect 40, Qualified 25, Proposal 12, Closed 8.",
+      title: "Explain a stats concept",
+      subtitle: "Ordinary question — won't touch your chart skill",
+      oneOff: true,
+      prompt: "Quick refresher: what does a 95% confidence interval actually mean?",
     },
   ],
 
   conversations: [
     // --- Cluster: deck-bar-charts (member 1) — the FIRST time, the house style
     //     emerges over several refinement turns (palette, then no gridlines/
-    //     legend, then sorted). Member 2 below is the terse "same as always"
-    //     repeat, which is exactly why this workflow is overdue for a Skill. ---
+    //     legend, then sorted). Member 2 below re-types the whole spec from
+    //     scratch (no skill yet to remember it) — exactly why it's overdue. ---
     {
       id: "c_an_chart1",
       profileId: "analyst",
@@ -203,7 +205,7 @@ export const analystProfile: Profile = {
           id: "m1",
           role: "user",
           content:
-            "Bar chart of growth across products. Same as always — company colors, no gridlines, no legend, sorted high to low.",
+            "Bar chart of growth across products for the deck. Use our palette starting with the clay orange #d97757, no gridlines, no legend, and sort the bars descending.",
           createdAt: "2026-05-20T09:30:00.000Z",
           attachments: [
             { id: "a_growth", name: "product_growth.csv", kind: "csv", content: GROWTH_CSV },
@@ -284,7 +286,7 @@ export const analystProfile: Profile = {
           id: "m1",
           role: "user",
           content:
-            "Make a pie chart of our traffic source mix from this CSV for the marketing slide. Company palette, no legend.",
+            "Make a pie chart of our traffic source mix from this CSV for the marketing slide. Use our palette starting with the clay orange #d97757, no legend.",
           createdAt: "2026-05-26T10:15:00.000Z",
           attachments: [
             { id: "a_traffic", name: "traffic_sources.csv", kind: "csv", content: TRAFFIC_CSV },
@@ -311,7 +313,7 @@ export const analystProfile: Profile = {
           id: "m1",
           role: "user",
           content:
-            "Grouped bar chart of actual vs. target revenue by quarter from this CSV for the board deck. Company palette, no gridlines, keep the legend on so they can tell the two series apart.",
+            "Grouped bar chart of actual vs. target revenue by quarter from this CSV for the board deck. Use our palette starting with the clay orange #d97757, no gridlines, but keep the legend on so they can tell the two series apart.",
           createdAt: "2026-05-28T16:05:00.000Z",
           attachments: [
             { id: "a_actuals", name: "actuals_vs_target.csv", kind: "csv", content: ACTUALS_CSV },
@@ -396,8 +398,13 @@ export const analystProfile: Profile = {
         {
           conversationId: "c_an_chart2",
           summary:
-            "Made a bar chart of growth across products; asked for 'company colors', 'no gridlines', 'no legend', 'sorted high to low'.",
-          quotes: ["company colors", "no gridlines", "no legend", "sorted high to low"],
+            "Made a bar chart of growth across products for the deck; again spelled out the full house style: palette 'starting with the clay orange #d97757', 'no gridlines', 'no legend', and 'sort the bars descending'.",
+          quotes: [
+            "starting with the clay orange #d97757",
+            "no gridlines",
+            "no legend",
+            "sort the bars descending",
+          ],
           cluster: "deck-bar-charts",
         },
       ],
