@@ -1,0 +1,26 @@
+name: Prod probe
+
+# Hourly end-to-end uptime check of the deployed app. Authenticates and sends
+# one example chat prompt; posts to Discord only if something fails.
+on:
+  schedule:
+    - cron: "0 * * * *" # top of every hour (UTC)
+  workflow_dispatch: {} # allow manual runs from the Actions tab
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Probe production
+        run: node scripts/probe.mjs
+        env:
+          PROBE_URL: https://upskilling-907f60f048.pages.dev
+          WEBSITE_DEMO_PASSWORD: ${{ secrets.WEBSITE_DEMO_PASSWORD }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
