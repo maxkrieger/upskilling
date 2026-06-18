@@ -161,6 +161,7 @@ export function Composer({ showPresets }: { showPresets: boolean }) {
         />
         <textarea
           ref={taRef}
+          data-testid="composer-input"
           autoFocus
           value={text}
           onChange={(e) => setText(e.target.value)}

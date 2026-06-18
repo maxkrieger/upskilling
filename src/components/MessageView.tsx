@@ -138,7 +138,7 @@ export function MessageView({
         : [];
 
   return (
-    <div className="flex">
+    <div className="flex" data-testid="assistant-msg">
       <div className="min-w-0 flex-1">
         {body}
         {showBanner && !isCard && card}

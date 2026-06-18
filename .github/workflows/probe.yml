@@ -1,7 +1,8 @@
 name: Prod probe
 
-# Hourly end-to-end uptime check of the deployed app. Authenticates and sends
-# one example chat prompt; posts to Discord only if something fails.
+# Hourly end-to-end BROWSER uptime check of the deployed app: headless Chrome
+# loads the site, logs in, sends one example prompt, and confirms the assistant
+# reply renders. Posts to Discord only if something fails.
 on:
   schedule:
     - cron: "0 * * * *" # top of every hour (UTC)
@@ -18,9 +19,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - name: Probe production
+      - run: npm ci
+      - id: chrome
+        uses: browser-actions/setup-chrome@v1
+      - name: Probe production (browser e2e)
         run: node scripts/probe.mjs
         env:
           PROBE_URL: https://upskilling-907f60f048.pages.dev
           WEBSITE_DEMO_PASSWORD: ${{ secrets.WEBSITE_DEMO_PASSWORD }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          PUPPETEER_EXECUTABLE_PATH: ${{ steps.chrome.outputs.chrome-path }}
