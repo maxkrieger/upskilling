@@ -21,13 +21,10 @@ import {
 const uid = (p: string) => `${p}_${Math.random().toString(36).slice(2, 10)}`;
 const now = () => new Date().toISOString();
 
-export type View = "chat" | "customize";
-
 interface State {
   authed: boolean;
   activeProfileId: string;
   activeConversationId: string | null;
-  view: View;
   sending: boolean;
   /** Attachment open in the side viewer panel (null = closed). */
   viewerAttachment: Attachment | null;
@@ -50,9 +47,7 @@ interface State {
   // actions
   login: (ok: boolean) => void;
   setProfile: (id: string) => void;
-  setView: (v: View) => void;
   openConversation: (id: string | null) => void;
-  newConversation: () => void;
   sendMessage: (
     text: string,
     attachments?: Attachment[],
@@ -87,7 +82,6 @@ export const useStore = create<State>()(
       authed: false,
       activeProfileId: PROFILES[0].id,
       activeConversationId: null,
-      view: "chat",
       sending: false,
       viewerAttachment: null,
       userConversations: {},
@@ -116,14 +110,9 @@ export const useStore = create<State>()(
 
       login: (ok) => set({ authed: ok }),
 
-      setProfile: (id) =>
-        set({ activeProfileId: id, activeConversationId: null, view: "chat" }),
+      setProfile: (id) => set({ activeProfileId: id, activeConversationId: null }),
 
-      setView: (v) => set({ view: v }),
-
-      openConversation: (id) => set({ activeConversationId: id, view: "chat" }),
-
-      newConversation: () => set({ activeConversationId: null, view: "chat" }),
+      openConversation: (id) => set({ activeConversationId: id }),
 
       // ---- Sending a message (creates/promotes a user conversation) ----
       sendMessage: async (text, attachments, opts) => {

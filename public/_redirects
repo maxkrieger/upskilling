@@ -1,0 +1,4 @@
+# Cloudflare Pages SPA fallback: serve index.html for client-side routes
+# (deep links + refresh on /c/:id and /customize/:skillId). Pages Functions
+# (/api/*) and existing static assets take precedence over this rewrite.
+/*    /index.html    200

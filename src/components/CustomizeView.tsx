@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import {
   ChevronDown,
   Code2,
@@ -41,9 +42,11 @@ export function CustomizeView() {
   const toggleSkill = useStore((s) => s.toggleSkill);
   const deleteSkill = useStore((s) => s.deleteSkill);
   const addManualSkill = useStore((s) => s.addManualSkill);
-  const setView = useStore((s) => s.setView);
+  const navigate = useNavigate();
+  const { skillId } = useParams();
+  const activeRef = useRef<HTMLButtonElement>(null);
 
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [flash, setFlash] = useState(false);
   const [creating, setCreating] = useState(false);
   const [query, setQuery] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -58,7 +61,17 @@ export function CustomizeView() {
     () => skills.filter((s) => s.name.toLowerCase().includes(query.toLowerCase())),
     [skills, query],
   );
-  const selected = skills.find((s) => s.id === selectedId) ?? filtered[0] ?? skills[0];
+  const selected = skills.find((s) => s.id === skillId) ?? filtered[0] ?? skills[0];
+
+  // Deep link (/customize/:skillId): bring that row into view and briefly
+  // highlight it so "View in Customize" lands clearly on the right item.
+  useEffect(() => {
+    if (!skillId) return;
+    activeRef.current?.scrollIntoView({ block: "nearest" });
+    setFlash(true);
+    const t = setTimeout(() => setFlash(false), 1200);
+    return () => clearTimeout(t);
+  }, [skillId]);
 
   const create = async () => {
     if (!name.trim() || !description.trim()) return;
@@ -110,14 +123,15 @@ export function CustomizeView() {
             return (
               <div key={s.id}>
                 <button
+                  ref={active ? activeRef : undefined}
                   onClick={() => {
-                    setSelectedId(s.id);
+                    navigate(`/customize/${s.id}`);
                     setCreating(false);
                     setMenuOpen(false);
                   }}
                   className={`flex w-full items-center justify-between gap-2 rounded-lg px-2 py-2 text-left text-sm ${
                     active ? "bg-elevated text-ink" : "text-muted hover:bg-elevated/60 hover:text-ink"
-                  }`}
+                  } ${active && flash ? "ring-2 ring-accent" : ""}`}
                 >
                   <span className="truncate">{s.name}</span>
                   <span className="flex shrink-0 items-center gap-2">
@@ -215,7 +229,7 @@ export function CustomizeView() {
                         <button
                           onClick={() => {
                             setMenuOpen(false);
-                            setView("chat");
+                            navigate("/");
                           }}
                           className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted hover:bg-elevated hover:text-ink"
                         >
@@ -226,7 +240,7 @@ export function CustomizeView() {
                             onClick={() => {
                               const id = selected.id;
                               setMenuOpen(false);
-                              setSelectedId(null);
+                              navigate("/customize");
                               deleteSkill(id);
                             }}
                             className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-accent hover:bg-elevated"

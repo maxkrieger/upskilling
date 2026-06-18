@@ -201,7 +201,7 @@ export const SKILL_SCHEMA = {
     description: {
       type: "string",
       description:
-        "One-to-two sentences: what the skill does, then when it applies. Trigger on the TASK/intent only (the recurring kind of request, by its subject and context). NEVER trigger on the user restating their preferences — the entire point is that the skill infers those preferences so the user no longer has to state them. Do not quote preference phrases (e.g. \"same as always\", \"the usual\") as triggers; those belong in instructions, not the trigger.",
+        "One-to-two sentences: what the skill does, then when it applies. Trigger on the TASK/intent only (the recurring kind of request, by its subject and context), broad enough to fire even when the user phrases the request minimally and omits every preference — just the ask plus its data — yet specific enough that unrelated requests don't match. Sanity-check it against a few varied future phrasings (including terse, preference-free ones) and a couple of unrelated asks before settling on the wording; never tailor it to specific example prompts. NEVER trigger on the user restating their preferences — the entire point is that the skill infers those preferences so the user no longer has to state them. Do not quote preference phrases (e.g. \"same as always\", \"the usual\") as triggers; those belong in instructions, not the trigger.",
     },
     instructions: {
       type: "string",

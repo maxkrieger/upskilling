@@ -109,21 +109,22 @@ export function MessageView({
   } else if (message.content) {
     parts.push({ kind: "text", text: message.content, key: "c" });
   }
-  // Host the cursor on the last TEXT part (not a trailing chip), so it keeps
-  // trailing the most recent text even before the post-chip text arrives.
-  let lastTextIdx = -1;
-  for (let i = parts.length - 1; i >= 0; i--) {
-    if (parts[i].kind === "text") {
-      lastTextIdx = i;
-      break;
-    }
-  }
+  // The streaming cursor sits at the very END of the content: inline on the last
+  // text part, or — when the reply currently ends on a spliced "using skill"
+  // chip (e.g. the skill-creator is authoring and hasn't emitted post-chip text
+  // yet) — as a standalone spinner BENEATH the chip, so it never looks stalled.
+  const lastIdx = parts.length - 1;
+  const lastIsText = lastIdx >= 0 && parts[lastIdx].kind === "text";
 
   const body: ReactNode[] =
     parts.length > 0
       ? parts.map((p, i) =>
           p.kind === "text" ? (
-            <Markdown key={p.key} content={p.text} cursor={i === lastTextIdx ? cursor : undefined} />
+            <Markdown
+              key={p.key}
+              content={p.text}
+              cursor={streaming && i === lastIdx ? cursor : undefined}
+            />
           ) : (
             <div key={p.key}>{p.node}</div>
           ),
@@ -141,6 +142,7 @@ export function MessageView({
     <div className="flex" data-testid="assistant-msg">
       <div className="min-w-0 flex-1">
         {body}
+        {streaming && parts.length > 0 && !lastIsText && <div className="mt-1">{cursor}</div>}
         {showBanner && !isCard && card}
       </div>
     </div>

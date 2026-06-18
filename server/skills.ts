@@ -31,7 +31,8 @@ export const CREATE_SKILL_TOOL = {
       name: { type: "string", description: "Short Title-case skill name." },
       description: {
         type: "string",
-        description: "What it does + WHEN it should trigger (task/context based, not the user restating preferences).",
+        description:
+          "What it does + WHEN it should trigger. Trigger on the recurring TASK/intent (its subject and context), broad enough to fire even when the user phrases the request minimally and omits every preference — just the ask plus its data — yet specific enough that unrelated requests don't match. Before finalizing, mentally test a few varied future phrasings of this task (including terse, preference-free ones) to confirm they'd trigger, plus a couple of unrelated asks to confirm they wouldn't, and refine the wording for that balance. Never restate the user's preferences as the trigger, and never tailor it to specific example prompts.",
       },
       instructions: {
         type: "string",
@@ -41,7 +42,7 @@ export const CREATE_SKILL_TOOL = {
         type: "array",
         items: { type: "string" },
         description:
-          "2-4 very short bullets (a few words each) of what the skill does/applies — shown to the user as a capability checklist. E.g. \"Apply company palette\", \"Remove gridlines + legend\", \"Sort bars descending\".",
+          "2-4 very short bullets (a few words each) of the concrete defaults the skill applies automatically — shown to the user as a capability checklist.",
       },
     },
     required: ["name", "description", "instructions", "highlights"],
@@ -57,7 +58,11 @@ export const UPDATE_SKILL_TOOL = {
     type: "object",
     properties: {
       name: { type: "string", description: "The existing skill's name (unchanged)." },
-      description: { type: "string", description: "Revised description (still task-based trigger)." },
+      description: {
+        type: "string",
+        description:
+          "Revised description — keep the task-based trigger broad enough to fire on terse, preference-free requests yet specific to this task; never tailor it to specific example prompts.",
+      },
       instructions: { type: "string", description: "Full revised SKILL.md body, keeping prior behavior + the new preference." },
       highlights: {
         type: "array",

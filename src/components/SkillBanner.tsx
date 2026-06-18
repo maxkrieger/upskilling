@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { BookOpen, Check, CheckCircle2 } from "lucide-react";
 import type { SkillCueBanner } from "../../shared/types.ts";
 import { useStore } from "../store.ts";
@@ -17,7 +18,7 @@ export function SkillBanner({
   const acceptCue = useStore((s) => s.acceptCue);
   const acceptUpdate = useStore((s) => s.acceptUpdate);
   const dismissCue = useStore((s) => s.dismissCue);
-  const setView = useStore((s) => s.setView);
+  const navigate = useNavigate();
   const skills = useStore((s) => s.skillsByProfile[s.activeProfileId] ?? s.skillsOf());
   const [busy, setBusy] = useState(false);
   const [dismissing, setDismissing] = useState(false);
@@ -57,7 +58,7 @@ export function SkillBanner({
           <CheckCircle2 size={14} className="text-accent" />
           {isUpdate ? `Updated ${createdName}.` : "Skill created."}
           <button
-            onClick={() => setView("customize")}
+            onClick={() => navigate("/customize")}
             className="text-faint underline underline-offset-2 hover:text-accent"
           >
             View in Customize
@@ -94,7 +95,7 @@ export function SkillBanner({
         )}
         <div className="px-4 pb-4 pt-2">
           <button
-            onClick={() => setView("customize")}
+            onClick={() => navigate(`/customize/${created.id}`)}
             className="text-xs text-faint underline underline-offset-2 hover:text-accent"
           >
             View in Customize

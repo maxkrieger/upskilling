@@ -1,4 +1,5 @@
 import { useMemo, type ReactNode } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Plus, SlidersHorizontal, Trash2 } from "lucide-react";
 import { PROFILES } from "../data/index.ts";
 import { useStore } from "../store.ts";
@@ -37,14 +38,12 @@ function NavRow({
 
 export function Sidebar() {
   const activeProfileId = useStore((s) => s.activeProfileId);
-  const activeConversationId = useStore((s) => s.activeConversationId);
-  const view = useStore((s) => s.view);
   const setProfile = useStore((s) => s.setProfile);
-  const setView = useStore((s) => s.setView);
-  const newConversation = useStore((s) => s.newConversation);
-  const openConversation = useStore((s) => s.openConversation);
   const clearAllData = useStore((s) => s.clearAllData);
   const userConversations = useStore((s) => s.userConversations);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const onCustomize = location.pathname.startsWith("/customize");
   const conversations = useMemo(
     () => useStore.getState().conversations(activeProfileId),
     [activeProfileId, userConversations],
@@ -59,7 +58,13 @@ export function Sidebar() {
         <label className="mb-1 block text-xs uppercase tracking-wide text-faint">
           Demo profile
         </label>
-        <Select value={activeProfileId} onValueChange={setProfile}>
+        <Select
+          value={activeProfileId}
+          onValueChange={(id) => {
+            setProfile(id);
+            navigate("/");
+          }}
+        >
           <SelectTrigger aria-label="Select demo profile">
             <SelectValue />
           </SelectTrigger>
@@ -75,12 +80,12 @@ export function Sidebar() {
 
       {/* Top nav — Customize lives here, following Claude's sidebar design */}
       <nav className="space-y-0.5 p-2">
-        <NavRow icon={<Plus size={18} />} label="New chat" onClick={() => newConversation()} />
+        <NavRow icon={<Plus size={18} />} label="New chat" onClick={() => navigate("/")} />
         <NavRow
           icon={<SlidersHorizontal size={18} />}
           label="Customize"
-          onClick={() => setView("customize")}
-          active={view === "customize"}
+          onClick={() => navigate("/customize")}
+          active={onCustomize}
           trailing={
             <span className="rounded-full bg-accent/20 px-2 py-0.5 text-xs text-accent">
               {enabledCount}
@@ -95,9 +100,9 @@ export function Sidebar() {
         {conversations.map((c) => (
           <button
             key={c.id}
-            onClick={() => openConversation(c.id)}
+            onClick={() => navigate(`/c/${c.id}`)}
             className={`mb-0.5 w-full truncate rounded-lg px-3 py-2 text-left text-sm ${
-              view === "chat" && c.id === activeConversationId
+              location.pathname === `/c/${c.id}`
                 ? "bg-elevated text-ink"
                 : "text-muted hover:bg-elevated/60"
             }`}
