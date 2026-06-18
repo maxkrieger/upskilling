@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { ArrowUp, FileText, Image as ImageIcon, Paperclip, X } from "lucide-react";
 import type { Attachment, AttachmentKind, PresetPrompt } from "../../shared/types.ts";
 import { getProfile } from "../data/index.ts";
@@ -16,6 +17,8 @@ export function Composer({ showPresets }: { showPresets: boolean }) {
   const activeProfileId = useStore((s) => s.activeProfileId);
   const sending = useStore((s) => s.sending);
   const sendMessage = useStore((s) => s.sendMessage);
+  const navigate = useNavigate();
+  const location = useLocation();
   const openAttachment = useStore((s) => s.openAttachment);
   const skills = useStore((s) => s.skillsByProfile[s.activeProfileId] ?? s.skillsOf());
   const indexOverrides = useStore((s) => s.indexOverrides);
@@ -57,6 +60,9 @@ export function Composer({ showPresets }: { showPresets: boolean }) {
     setText("");
     setAttachments([]);
     await sendMessage(t, att.length ? att : undefined);
+    // Give a freshly-created conversation its own URL (refresh / shareable).
+    const id = useStore.getState().activeConversationId;
+    if (id && location.pathname !== `/c/${id}`) navigate(`/c/${id}`);
   };
 
   const runPreset = async (p: PresetPrompt) => {

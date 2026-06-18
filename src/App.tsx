@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Navigate, Route, Routes, useNavigate, useParams } from "react-router-dom";
+import { Navigate, Route, Routes, useParams } from "react-router-dom";
 import { useStore } from "./store.ts";
 import { Gate } from "./components/Gate.tsx";
 import { Sidebar } from "./components/Sidebar.tsx";
@@ -8,27 +8,20 @@ import { CustomizeView } from "./components/CustomizeView.tsx";
 import { AttachmentPanel } from "./components/AttachmentPanel.tsx";
 
 /**
- * Chat page. Keeps the URL (`/` or `/c/:conversationId`) and the store's
- * activeConversationId in sync in both directions:
- *  - route -> store: opening a conversation by URL (sidebar click, deep link),
- *  - store -> route: a brand-new conversation created by sending a message on
- *    `/` gets its own URL so it's refreshable / shareable.
+ * Chat page. Syncs the URL (`/` or `/c/:conversationId`) into the store's
+ * activeConversationId (sidebar click, deep link, "New chat" -> `/`). The
+ * reverse direction — a brand-new conversation getting its own `/c/:id` URL —
+ * is handled at the send site (Composer), NOT here: doing it as an effect raced
+ * with this one, so navigating to `/` for a new chat bounced back to the old
+ * conversation (the store hadn't reset to null yet).
  */
 function ChatRoute() {
   const { conversationId } = useParams();
-  const navigate = useNavigate();
-  const activeConversationId = useStore((s) => s.activeConversationId);
   const openConversation = useStore((s) => s.openConversation);
 
   useEffect(() => {
     openConversation(conversationId ?? null);
   }, [conversationId, openConversation]);
-
-  useEffect(() => {
-    if (activeConversationId && activeConversationId !== conversationId) {
-      navigate(`/c/${activeConversationId}`, { replace: true });
-    }
-  }, [activeConversationId, conversationId, navigate]);
 
   return <ChatView />;
 }
