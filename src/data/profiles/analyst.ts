@@ -77,7 +77,7 @@ export const analystProfile: Profile = {
       title: "Bar chart from a CSV",
       subtitle: "Revenue by product for the board deck",
       prompt:
-        "Make a bar chart of revenue by product from this CSV for the board deck. Use our company palette starting with the clay orange #d97757, no gridlines, no legend, and sort the bars descending.",
+        "Make a bar chart of revenue by product from this CSV for the board deck. Use our company palette — clay orange #d97757, then #c2613f, #e0a08a, #8c4a32, #b4b2a8 — no gridlines, no legend, and sort the bars descending.",
       attachmentRefs: ["revenue_by_product.csv"],
     },
     {
@@ -85,7 +85,7 @@ export const analystProfile: Profile = {
       title: "Churn bar chart",
       subtitle: "By customer segment",
       prompt:
-        "Bar chart of churn by segment from this file for our QBR slide — company palette (#d97757 first), no gridlines, no legend, sorted descending.",
+        "Bar chart of churn by segment from this file for our QBR slide — company palette (#d97757, #c2613f, #e0a08a, #8c4a32, #b4b2a8), no gridlines, no legend, sorted descending.",
       attachmentRefs: ["churn_by_segment.csv"],
     },
     {
@@ -155,7 +155,7 @@ export const analystProfile: Profile = {
         {
           id: "m3",
           role: "user",
-          content: "Use our company palette — start with the clay orange #d97757.",
+          content: "Use our company palette — clay orange #d97757, then #c2613f, #e0a08a, #8c4a32, #b4b2a8.",
           createdAt: "2026-05-04T15:14:00.000Z",
         },
         {
@@ -205,7 +205,7 @@ export const analystProfile: Profile = {
           id: "m1",
           role: "user",
           content:
-            "Bar chart of growth across products for the deck. Use our palette starting with the clay orange #d97757, no gridlines, no legend, and sort the bars descending.",
+            "Bar chart of growth across products for the deck. Use our company palette — clay orange #d97757, then #c2613f, #e0a08a, #8c4a32, #b4b2a8 — no gridlines, no legend, and sort the bars descending.",
           createdAt: "2026-05-20T09:30:00.000Z",
           attachments: [
             { id: "a_growth", name: "product_growth.csv", kind: "csv", content: GROWTH_CSV },
@@ -259,7 +259,7 @@ export const analystProfile: Profile = {
           id: "m1",
           role: "user",
           content:
-            "Plot the MAU trend over the months as a line chart for the growth review. Company palette starting with #d97757, no gridlines, no legend.",
+            "Plot the MAU trend over the months as a line chart for the growth review. Use our clay orange #d97757 for the line, no gridlines, no legend.",
           createdAt: "2026-05-22T13:40:00.000Z",
           attachments: [
             { id: "a_mau_line", name: "monthly_active_users.csv", kind: "csv", content: MAU_CSV },
@@ -286,7 +286,7 @@ export const analystProfile: Profile = {
           id: "m1",
           role: "user",
           content:
-            "Make a pie chart of our traffic source mix from this CSV for the marketing slide. Use our palette starting with the clay orange #d97757, no legend.",
+            "Make a pie chart of our traffic source mix from this CSV for the marketing slide. Use our company palette — clay orange #d97757, then #c2613f, #e0a08a, #8c4a32, #b4b2a8 — no legend.",
           createdAt: "2026-05-26T10:15:00.000Z",
           attachments: [
             { id: "a_traffic", name: "traffic_sources.csv", kind: "csv", content: TRAFFIC_CSV },
@@ -313,7 +313,7 @@ export const analystProfile: Profile = {
           id: "m1",
           role: "user",
           content:
-            "Grouped bar chart of actual vs. target revenue by quarter from this CSV for the board deck. Use our palette starting with the clay orange #d97757, no gridlines, but keep the legend on so they can tell the two series apart.",
+            "Grouped bar chart of actual vs. target revenue by quarter from this CSV for the board deck. Two series, so use the clay orange #d97757 for actuals and slate #6b8e8a for target, no gridlines, but keep the legend on so they can tell them apart.",
           createdAt: "2026-05-28T16:05:00.000Z",
           attachments: [
             { id: "a_actuals", name: "actuals_vs_target.csv", kind: "csv", content: ACTUALS_CSV },
@@ -386,10 +386,9 @@ export const analystProfile: Profile = {
         {
           conversationId: "c_an_chart1",
           summary:
-            "Built a bar chart of quarterly earnings for the deck, dialing in the house style over several turns: 'use our company palette' starting with the clay orange '#d97757', then 'drop the gridlines and the legend', then 'sort the bars descending'.",
+            "Built a bar chart of quarterly earnings for the deck, dialing in the house style over several turns: the full company palette 'clay orange #d97757, then #c2613f, #e0a08a, #8c4a32, #b4b2a8', then 'drop the gridlines and the legend', then 'sort the bars descending'.",
           quotes: [
-            "use our company palette",
-            "start with the clay orange #d97757",
+            "company palette — clay orange #d97757, then #c2613f, #e0a08a, #8c4a32, #b4b2a8",
             "drop the gridlines and the legend",
             "sort the bars descending",
           ],
@@ -398,9 +397,9 @@ export const analystProfile: Profile = {
         {
           conversationId: "c_an_chart2",
           summary:
-            "Made a bar chart of growth across products for the deck; again spelled out the full house style: palette 'starting with the clay orange #d97757', 'no gridlines', 'no legend', and 'sort the bars descending'.",
+            "Made a bar chart of growth across products for the deck; again spelled out the full house style: the company palette 'clay orange #d97757, then #c2613f, #e0a08a, #8c4a32, #b4b2a8', 'no gridlines', 'no legend', and 'sort the bars descending'.",
           quotes: [
-            "starting with the clay orange #d97757",
+            "company palette — clay orange #d97757, then #c2613f, #e0a08a, #8c4a32, #b4b2a8",
             "no gridlines",
             "no legend",
             "sort the bars descending",
