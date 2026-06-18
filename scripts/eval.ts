@@ -36,7 +36,7 @@ import { conversationToText, id, toAnthropicMessages } from "../server/util.ts";
 import { getProfile } from "../src/data/index.ts";
 import type { Conversation, Attachment, PresetPrompt, Profile, Skill, WorkflowSet } from "../shared/types.ts";
 import { normalizeCluster, upsertSummary } from "../shared/workflow.ts";
-import { CUE_CASES } from "./eval-cases.ts";
+import { CUE_CASES, TRIGGER_PROBES, type TriggerProbe } from "./eval-cases.ts";
 
 /**
  * Deterministic guard for the cluster-drift re-cue bug: re-extracting a workflow
@@ -341,31 +341,37 @@ async function simulateButtonPress(
   return { created, creatorFiredFirst, skill };
 }
 
-/** Does a preset (with its attachments) cause `targetSlug`'s skill to fire? */
-async function askFires(
+/** How many of `repeat` runs cause `targetSlug`'s skill to fire for this probe. */
+async function countFires(
   profile: Profile,
-  preset: PresetPrompt,
+  probe: TriggerProbe,
   container: unknown,
   targetSlug: string,
-): Promise<boolean> {
-  let fired = false;
-  await streamChat({
-    system: buildChatSystem({ profileName: profile.name, profileRole: profile.role }),
-    messages: toAnthropicMessages([
-      { role: "user", content: preset.prompt, attachments: resolveAtts(profile, preset) },
-    ]),
-    maxTokens: 2500,
-    container,
-    tools: [CODE_EXECUTION_TOOL],
-    betas: SKILLS_BETAS,
-    handlers: {
-      onText: () => {},
-      onSkillFired: (slug) => {
-        if (slug === targetSlug || slugBase(slug) === slugBase(targetSlug)) fired = true;
+  repeat: number,
+): Promise<number> {
+  const attachments = (probe.attachmentRefs ?? [])
+    .map((n) => profile.attachments.find((a) => a.name === n))
+    .filter((a): a is Attachment => !!a);
+  let fires = 0;
+  for (let r = 0; r < repeat; r++) {
+    let fired = false;
+    await streamChat({
+      system: buildChatSystem({ profileName: profile.name, profileRole: profile.role }),
+      messages: toAnthropicMessages([{ role: "user", content: probe.text, attachments }]),
+      maxTokens: 2500,
+      container,
+      tools: [CODE_EXECUTION_TOOL],
+      betas: SKILLS_BETAS,
+      handlers: {
+        onText: () => {},
+        onSkillFired: (slug) => {
+          if (slug === targetSlug || slugBase(slug) === slugBase(targetSlug)) fired = true;
+        },
       },
-    },
-  });
-  return fired;
+    });
+    if (fired) fires++;
+  }
+  return fires;
 }
 
 /**
@@ -373,7 +379,12 @@ async function askFires(
  * button press), then the loose presets must FIRE that created skill.
  */
 async function evalLifecycle() {
-  console.log("\n=== Skill lifecycle: cue → create (button) → fire on loose asks ===");
+  const REPEAT = Math.max(1, Number(process.env.EVAL_REPEAT || "1"));
+  console.log(
+    "\n=== Skill lifecycle: cue → create (button) → trigger coverage" +
+      (REPEAT > 1 ? ` (×${REPEAT} for variance)` : "") +
+      " ===",
+  );
   const creatorRef = await getSkillCreatorRef();
   const creatorContainer = skillContainer([], creatorRef);
   const createTools = [CODE_EXECUTION_TOOL, CREATE_SKILL_TOOL, UPDATE_SKILL_TOOL];
@@ -428,22 +439,27 @@ async function evalLifecycle() {
         rows.push({ profile: pid, phase: "create", preset: preset.title, ok });
       }
 
-      // Phase 2 — loose presets: workflow ones must fire the created skill;
-      // one-off asks must NOT (the skill shouldn't over-trigger).
+      // Phase 2 — trigger coverage: the created skill must fire on VARIED, terse,
+      // preference-free phrasings of the task (positive) and stay quiet on
+      // clearly unrelated asks (negative). Breadth = robustness; EVAL_REPEAT>1
+      // runs each probe N times to surface variance.
       if (createdSkill) {
         const liveContainer = skillContainer([createdSkill], creatorRef);
-        for (const loose of profile.loosePresets ?? []) {
-          const expectFire = !loose.oneOff;
-          const fired = await askFires(profile, loose, liveContainer, createdSkill.slug!);
-          const ok = fired === expectFire;
-          console.log(
-            `  ${ok ? "✓" : "✗"} fire  ${loose.title} → ${fired ? "fired" : "no fire"}` +
-              ` (expected ${expectFire ? "fire" : "no fire"})`,
-          );
-          rows.push({ profile: pid, phase: "fire", preset: loose.title, ok, note: expectFire ? "expect-fire" : "expect-skip" });
+        const probes = TRIGGER_PROBES[pid] ?? { positive: [], negative: [] };
+        for (const probe of probes.positive) {
+          const fires = await countFires(profile, probe, liveContainer, createdSkill.slug!, REPEAT);
+          const ok = fires === REPEAT; // robust: should fire on every run
+          console.log(`  ${ok ? "✓" : "✗"} fire+ ${probe.text.slice(0, 52)} → ${fires}/${REPEAT}`);
+          rows.push({ profile: pid, phase: "fire", preset: probe.text.slice(0, 40), ok, note: `pos ${fires}/${REPEAT}` });
+        }
+        for (const probe of probes.negative) {
+          const fires = await countFires(profile, probe, liveContainer, createdSkill.slug!, REPEAT);
+          const ok = fires === 0; // robust: should never fire
+          console.log(`  ${ok ? "✓" : "✗"} skip- ${probe.text.slice(0, 52)} → ${fires}/${REPEAT}`);
+          rows.push({ profile: pid, phase: "fire", preset: probe.text.slice(0, 40), ok, note: `neg ${fires}/${REPEAT}` });
         }
       } else {
-        console.log("  (no skill created — skipping loose-fire checks)");
+        console.log("  (no skill created — skipping trigger-coverage checks)");
       }
     }
   } finally {
@@ -453,13 +469,29 @@ async function evalLifecycle() {
 
   const presetRows = rows.filter((r) => r.phase === "create" || r.phase === "cue");
   const fires = rows.filter((r) => r.phase === "fire");
+  const posRows = fires.filter((r) => r.note?.startsWith("pos"));
+  const negRows = fires.filter((r) => r.note?.startsWith("neg"));
   const presetOk = presetRows.filter((r) => r.ok).length;
   const fireOk = fires.filter((r) => r.ok).length;
+  const posOk = posRows.filter((r) => r.ok).length;
+  const negOk = negRows.filter((r) => r.ok).length;
   console.log(
     `\n  presets (cue + create): ${presetOk}/${presetRows.length}` +
-      ` | loose asks (fire vs. no-fire): ${fireOk}/${fires.length}`,
+      ` | trigger fire+ ${posOk}/${posRows.length}` +
+      ` | skip- ${negOk}/${negRows.length}`,
   );
-  return { rows, presetOk, presetTotal: presetRows.length, fireOk, fireTotal: fires.length };
+  return {
+    rows,
+    repeat: REPEAT,
+    presetOk,
+    presetTotal: presetRows.length,
+    fireOk,
+    fireTotal: fires.length,
+    posOk,
+    posTotal: posRows.length,
+    negOk,
+    negTotal: negRows.length,
+  };
 }
 
 /**

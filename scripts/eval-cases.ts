@@ -244,3 +244,61 @@ export const CUE_CASES: CueCase[] = [
     expectCue: false,
   },
 ];
+
+/**
+ * Trigger-coverage probes for the lifecycle eval. After a profile's skill is
+ * created, these check it fires robustly on VARIED, terse, preference-free
+ * phrasings of the same task (positive) and stays quiet on clearly unrelated
+ * asks (negative). This is eval DATA, so in-distribution phrasing is fine — it's
+ * the test set. Breadth here = robustness: it catches a created description that
+ * triggers too narrowly or too broadly when a prompt/pipeline change ships.
+ */
+export interface TriggerProbe {
+  text: string;
+  attachmentRefs?: string[];
+}
+
+export const TRIGGER_PROBES: Record<string, { positive: TriggerProbe[]; negative: TriggerProbe[] }> = {
+  analyst: {
+    positive: [
+      { text: "Bar chart of headcount by department: Engineering 48, Sales 22, Marketing 14, Ops 9, Support 17." },
+      { text: "Quick bar chart of Q3 revenue by region: NA 120, EMEA 86, APAC 64, LATAM 31." },
+      { text: "Chart deals by pipeline stage: Prospect 40, Qualified 25, Proposal 12, Closed 8." },
+      { text: "Make a bar graph of signups by channel for the board deck: Organic 180, Paid 90, Referral 60, Social 30." },
+      { text: "Turn this into a column chart of spend by team: Eng 1.2, Sales 0.8, Ops 0.5." },
+    ],
+    negative: [
+      { text: "What does a 95% confidence interval actually mean?" },
+      { text: "Write a SQL query to compute 7-day retention from an events table." },
+      { text: "Remind me the formula for compound annual growth rate." },
+    ],
+  },
+  lawyer: {
+    positive: [
+      { text: "New NDA from Acme just landed — is it signable?", attachmentRefs: ["acme_nda.txt"] },
+      { text: "Quick risk read on this vendor NDA before I forward it.", attachmentRefs: ["vendor_nda.txt"] },
+      { text: "Can you review this NDA for me?", attachmentRefs: ["acme_nda.txt"] },
+      { text: "Look over this confidentiality agreement and flag anything off-market.", attachmentRefs: ["vendor_nda.txt"] },
+      { text: "Is this mutual NDA clean to sign?", attachmentRefs: ["acme_nda.txt"] },
+    ],
+    negative: [
+      { text: "What's the statute of limitations for breach of a written contract in California?" },
+      { text: "When is the California MCLE compliance deadline and how many hours do I need?" },
+      { text: "Summarize this quarter's revenue for the all-hands." },
+    ],
+  },
+  social: {
+    positive: [
+      { text: "Caption for a new piece. Artist: Tomás Rivera. Title: 'Saltmarsh'. Medium: cyanotype on cotton. Year: 2024." },
+      { text: "Write an Instagram caption for this new oil painting by Mara Velasco." },
+      { text: "Need a caption for our new bronze sculpture, 'Aftering' by Lena Brandt, 2023." },
+      { text: "IG caption for a new arrival: a woodcut by R. Okafor, 2025." },
+      { text: "Caption this photograph for the gallery's Instagram." },
+    ],
+    negative: [
+      { text: "What time of day should a gallery post on Instagram to get the most engagement?" },
+      { text: "My fiddle leaf fig keeps dropping leaves. What am I doing wrong?" },
+      { text: "What's a good camera for photographing artwork in the gallery?" },
+    ],
+  },
+};
